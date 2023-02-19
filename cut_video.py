@@ -7,15 +7,16 @@ def main():
     data_path = r"output\var_hist"
     data_list = os.listdir(data_path)
 
-    video_path = r"data"
+    video_path = r"F:\work\video_analyze\data\video"
 
     cut_video_path = r"output\cut_video"
 
     fps = 24
-    sec_set = 5
+    sec_set = 2
     interval_set = fps*sec_set
 
-    for i in data_list :
+
+    for i in tqdm(data_list) :
         pic_name = i.replace("_hist_var.txt","")
         var_hist = []
 

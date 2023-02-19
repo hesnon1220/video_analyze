@@ -14,10 +14,9 @@ import scipy.signal
 def main():
 
 
-    file_path = r"F:\work\video_analyze\separated\htdemucs\test\drums.wav"
+    file_path = r"F:\work\video_analyze\separated\htdemucs\test\vocals.wav"
 
     fps = 30.0
-    bar_num = 150
 
     sampling_interval = 1/fps   #間隔
 
@@ -26,15 +25,20 @@ def main():
     if extension != ".wav" :    #轉檔wav
         file_path = mp32wav(root,extension)
     samplerate, data = wavfile.read(file_path)   #獲取採樣率、振幅(雙聲道)
+    #print(samplerate)
+    #print(data.shape)
+    
+    result = fft(data,samplerate,sampling_interval) #傅立葉轉換
+    print(len(result))
 
-    result = fft(data,samplerate,sampling_interval,bar_num) #傅立葉轉換
+
 
     cut_result = []
     for i in result :
-        cut_result.append(np.max(i[:5]))
+        cut_result.append(np.max(i))
 
     draw_single_lines(np.array(cut_result),r"F:\work\video_analyze\output","cut_reslut")
-    
+
     #peaks = scipy.signal.find_peaks_cwt(cut_result,5)
 
     

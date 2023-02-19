@@ -2,3 +2,11 @@ data/*
 output/*
 __pycache__/*
 separated/*
+*/*.mp4
+*/*.avi
+*/*.mp3
+*/*.wav
+*.mp4
+*.avi
+*.mp3
+*.wav
