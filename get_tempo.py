@@ -12,12 +12,15 @@ import pylab as pl
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn import cluster
+import re
+
+
 def main() :
     fps = 30
     #audio_path = os.path.join(r"F:\work\video_analyze\separated\htdemucs\test",i)
     audio_path = r"F:\work\video_analyze\data\test.mp3"
     y,sr = librosa.load(audio_path)
-    
+    fft_data = get_fft(audio_path,fps)
 
 
     vocal_path = r"F:\work\video_analyze\separated\htdemucs\test\vocals.wav"
@@ -26,6 +29,23 @@ def main() :
 
     #print(y.shape)
     #print(sr)
+
+
+    print(vocal_cut)
+    print(len(fft_data))
+
+    invert_data = []
+    step_num = 0
+    for i in range(len(vocal_cut)) :
+        invert_data.append(int(vocal_cut[i]-step_num))
+        step_num = vocal_cut[i]
+    invert_data.append(int(len(fft_data)-step_num ))
+    
+
+
+    print(invert_data)
+
+
 
     tempo,beats = librosa.beat.beat_track(y=y,sr=sr)
 
@@ -47,7 +67,24 @@ def main() :
 
 
     fft_data = get_fft(audio_path,fps)
-    
+
+
+
+
+    data_dict = get_cut_video_dict(r"F:\work\video_analyze\output\cut_video")
+
+
+    sorted_cut_data = sorted(list(map(int,data_dict.keys())),reverse=True)
+
+
+    count_dict = {}
+    for i in sorted_cut_data :
+        count_dict[str(i)] = len(data_dict[str(i)])
+
+
+    fill_fields(invert_data,count_dict)
+
+    """
     cut_result = []
     for i in fft_data :
         cut_result.append(np.max(i[:100]))
@@ -65,6 +102,12 @@ def main() :
             tmp_data.append(i)
     print(tmp_data)
     #draw_single_lines(np.array(cut_result),r"F:\work\video_analyze\output","cut_reslut")
+
+
+
+
+
+
     
     x_bar = np.arange( 0 , len( cut_result ) , 1 )
     #peaks = scipy.signal.find_peaks_cwt(input_data,5)
@@ -98,6 +141,9 @@ def main() :
     clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
     new_video = clip.set_audio(audioclip)   #影片合併音頻
     new_video.write_videofile( os.path.join(r"test.mp4"))    #輸出影片
+    """
+
+
 
     """
     fig, ax = plt.subplots( figsize = (20,8) , nrows=2, sharex=True)
@@ -114,6 +160,77 @@ def main() :
     plt.savefig("test.png")
     plt.close('all')
     """
+
+def check_list(lst):
+    if True in lst:
+        return True, [i for i, x in enumerate(lst) if x]
+    else:
+        return False,[]
+
+def min_index(lst):
+    min_val = min(lst)
+    return [i for i, x in enumerate(lst) if x == min_val]
+
+
+
+def fill_fields(fields, objects_dict):
+
+
+    objects = list(objects_dict.keys())
+
+
+    print(fields)
+    print(objects)
+
+    rec_dict = {}
+    obj_idx = 0
+    while obj_idx < len(objects) and max(fields) != 0 :
+    #for i,x in enumerate(objects) :
+        x = objects[obj_idx]
+        gap = np.array(fields)-int(x)
+        T_F , ind_list = check_list(gap>=0)
+        print( x , fields , T_F , end="\r" )
+        if T_F and objects_dict[x] != 0 :
+            rec_idx = ind_list[min_index([ gap[k] for k in ind_list])[0]]
+            if str(rec_idx) not in rec_dict.keys() : rec_dict[str(rec_idx)]  = []
+            rec_dict[str(rec_idx)].append(x)
+            fields[rec_idx] -= int(x)
+            objects_dict[x] -= 1
+        else :
+            obj_idx += 1
+
+    print(fields)
+    print(rec_dict)
+
+
+def _fill_fields(fields, objects):
+    # 按長度從小到大排序
+    fields = sorted(fields)
+    objects = sorted(objects)
+
+    # 建立一個空字典，用於儲存已經被佔用的物體和它們的位置
+    used_objects = {}
+
+    # 遍歷所有空欄位
+    for i, field in enumerate(fields):
+        # 尋找符合長度的物體
+        for j, obj in enumerate(objects):
+            if len(obj) <= field:  # 物體小於等於欄位才能放入
+                # 如果找到符合長度的物體，將它放進空欄位中
+                used_objects[obj] = i
+                objects.pop(j)
+                break
+        
+        # 如果無法找到符合長度的物體，則跳過該空欄位
+        if len(used_objects) < len(fields):
+            continue
+
+        # 如果所有空欄位都被填滿了，則退出迴圈
+        break
+
+    # 返回已經被佔用的物體和它們的位置
+    return used_objects
+
 
 def get_point(audio_file):
     # 讀取音訊檔案
@@ -181,12 +298,41 @@ def calVolumeDB(waveData, frameSize, overLap):
     return volume
 
 
+def get_cut_video_dict(video_path):
+    return_dict = {}
+    pattern = r"(.+?)_(\d+)\.mp4$"
+    for i in os.listdir(video_path) :
+        vidCap = cv2.VideoCapture(os.path.join(video_path,i))
+        match = re.search(pattern, i)
+        # 提取匹配的結果
+        if match:
+            name = match.group(1)
+            num = match.group(2)
+            frame_count = str(int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT)))
+            if frame_count not in return_dict.keys() : return_dict[frame_count] = []
+            return_dict[frame_count].append([name,num])
+        else:
+            print("No match")
+
+        # 釋放資源
+        vidCap.release()
+    return return_dict
+        
+
+
+
 if __name__ == "__main__" :
     main()
     #audio_path = r"F:\work\video_analyze\separated\htdemucs\test\vocals.wav"
     #get_point(audio_path)
 
 
+    #data_dict = get_cut_video_dict(r"F:\work\video_analyze\output\cut_video")
+    #print(data_dict)
+
+
+
+    #print(fill_fields([10,9,8,7],[8,5,2,1]))
 
     """
     fw = wave.open(audio_path,'r')
