@@ -1,13 +1,16 @@
 import numpy as np
 import cv2
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import os
 import math
 from skimage.segmentation import clear_border
 from skimage import morphology
 from skimage.metrics import structural_similarity
+from tqdm import tqdm
+from moviepy.editor import AudioFileClip,VideoFileClip
+import scipy.signal
 ####################################################################################################################################
 def area_cal(pig_p , p_list:list) :
     '''
@@ -478,3 +481,37 @@ def campHash(hash1, hash2):
 ####################################################################################################################################
 def skss(standard_gray,compare_gray):
     return structural_similarity(standard_gray,compare_gray,data_range=compare_gray.max() - compare_gray.min())
+####################################################################################################################################
+def fft(input_data,samplerate,sampling_interval,bar_num) -> list:
+    lenth = np.shape(input_data)[0] #資料長度
+    d1 = np.array([ input_data[i][0] for i in range(lenth) ])   #單聲道資料
+    fft_interval = int(samplerate * sampling_interval)  #計算區間
+    result = []
+    for i in tqdm(range(int(lenth/fft_interval))):    #分段進行傅立葉轉換
+        fft_tmp = np.abs(np.fft.fft(d1[fft_interval*i :fft_interval*(i+1)]))
+        fft_tmp = fft_tmp[:int(np.shape(fft_tmp)[0]/2) ]    #保留一半傅立葉轉換 
+        t = int(np.shape(fft_tmp)[0]/2/bar_num) #計算區間
+        if t == 0 : raise Exception('bar_num is to large : '+ str(np.shape(fft_tmp)[0]/2) + '/' + str(bar_num) + ' sould be bigger than 1 !')
+        #區間過大導致無法迭代繪製長條圖
+        fft = []
+        for i in range(bar_num):    #計算平均值
+            fft.append(shorten_number(np.mean(fft_tmp[t*i:t*(i+1)])))
+        result.append(fft)
+    return result
+####################################################################################################################################
+def mp32wav(root,extension)->str:   #轉檔
+    audioclip = AudioFileClip(root + extension) #獲取音頻位置
+    audioclip.write_audiofile(root + ".wav")    #轉換為wav
+    return ( root + ".wav" )    #回傳新檔名
+####################################################################################################################################
+def draw_single_lines(input_data,output_path,save_name):
+    x_bar = np.arange( 0 , len( input_data ) , 1 )
+    #peaks = scipy.signal.find_peaks_cwt(input_data,5)
+    peaks,_ = scipy.signal.find_peaks(input_data)
+    print(peaks)
+    fig = plt.figure(figsize=(20,8))
+    plt.subplot(111)
+    plt.plot( x_bar , input_data , c = "r" )
+    plt.scatter(peaks, input_data[peaks])
+    plt.savefig(os.path.join(output_path,"{}.png".format(save_name)),bbox_inches='tight',pad_inches = 0)
+    plt.close('all')

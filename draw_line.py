@@ -4,9 +4,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
-from Helper import shorten_number
-
-
+from Helper_private import shorten_number
 
 
 def main():

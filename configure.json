@@ -1,0 +1,7 @@
+{
+    "fps" : 60.0,
+    "bar_num" : 150,
+    "video_width" : 1024,
+    "video_hight" : 720,
+    "output_dir" : "output"
+}
