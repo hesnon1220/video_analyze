@@ -11,7 +11,7 @@ def main():
 
     cut_video_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
 
-    fps = 24
+    fps = 23.98
     sec_set = 5
     interval_set = fps*sec_set
 

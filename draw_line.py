@@ -9,10 +9,10 @@ from Helper_private import shorten_number
 
 def main():
 
-    data_path = r"output"
+    data_path = r"F:\work\video_analyze\output\var_hist\Beelzebub-jou no Okinimesu mama"
     data_list = os.listdir(data_path)
 
-    output_path = r"img"
+    output_path = r"F:\work\video_analyze\output\img\Beelzebub-jou no Okinimesu mama"
     for i in tqdm(data_list) :
         pic_name = i.replace("txt","")
         var_hist = []
@@ -25,7 +25,7 @@ def main():
         #print(var_hist)
 
         x_bar = np.arange( 0 , len( var_hist ) , 1 )
-        fig = plt.figure(figsize=(20,8))
+        fig = plt.figure(figsize=(50,8))
         plt.subplot(111)
         plt.plot( x_bar , var_hist , c = "r" )
         plt.savefig(os.path.join(output_path,"{}.png".format(pic_name)),bbox_inches='tight',pad_inches = 0)
