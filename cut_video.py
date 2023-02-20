@@ -7,12 +7,12 @@ def main():
     data_path = r"output\var_hist"
     data_list = os.listdir(data_path)
 
-    video_path = r"F:\work\video_analyze\data\video"
+    video_path = r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama"
 
-    cut_video_path = r"output\cut_video"
+    cut_video_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
 
     fps = 24
-    sec_set = 2
+    sec_set = 5
     interval_set = fps*sec_set
 
 

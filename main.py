@@ -4,12 +4,17 @@ from Helper_private import *
 from tqdm import tqdm
 import time
 
-data_floder = r"data"
-output_floder = r"output"
+
 
 
 
 def main():
+
+    data_floder = r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama"
+    output_floder = r"F:\work\video_analyze\output\var_hist\Beelzebub-jou no Okinimesu mama"
+
+
+
     video_list = os.listdir(data_floder)
     print(video_list)
     
