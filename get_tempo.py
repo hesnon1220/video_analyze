@@ -13,17 +13,19 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn import cluster
 import re
-
+import random
 
 def main() :
-    fps = 30
+    
+    fps = 23.98
+
     #audio_path = os.path.join(r"F:\work\video_analyze\separated\htdemucs\test",i)
-    audio_path = r"F:\work\video_analyze\data\test.mp3"
+    audio_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\01.ピンクレモネード.mp3"
     y,sr = librosa.load(audio_path)
     fft_data = get_fft(audio_path,fps)
 
 
-    vocal_path = r"F:\work\video_analyze\separated\htdemucs\test\vocals.wav"
+    vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
     vocal_point = get_point(vocal_path)
     vocal_cut = np.array(np.array(vocal_point)*fps,dtype="uint64")
 
@@ -31,8 +33,6 @@ def main() :
     #print(sr)
 
 
-    print(vocal_cut)
-    print(len(fft_data))
 
     invert_data = []
     step_num = 0
@@ -40,10 +40,6 @@ def main() :
         invert_data.append(int(vocal_cut[i]-step_num))
         step_num = vocal_cut[i]
     invert_data.append(int(len(fft_data)-step_num ))
-    
-
-
-    print(invert_data)
 
 
 
@@ -66,13 +62,10 @@ def main() :
     point_cut = np.array(np.array(tmp_time)*fps,dtype="uint64")
 
 
-    fft_data = get_fft(audio_path,fps)
+    fft_data = get_fft(vocal_path,fps)
 
 
-
-
-    data_dict = get_cut_video_dict(r"F:\work\video_analyze\output\cut_video")
-
+    data_dict = get_cut_video_dict(r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama")
 
     sorted_cut_data = sorted(list(map(int,data_dict.keys())),reverse=True)
 
@@ -82,12 +75,67 @@ def main() :
         count_dict[str(i)] = len(data_dict[str(i)])
 
 
-    fill_fields(invert_data,count_dict)
+    rec_dict = fill_fields(invert_data,count_dict)
+
+
+
+
+
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')    #輸出影像設定
+    out = cv2.VideoWriter( os.path.join('test.avi'), fourcc, fps, (1280,720))   #輸出無聲長條影像
+
+    output_frame = 0
+    cut_video_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
+    vocal_idx = 0
+
+    space_img = np.zeros(( 720,1280, 3), np.uint8)
+
+    totla_frame = int(len(y)/sr*fps)
+    vocal_cut_withend = np.append(vocal_cut,[totla_frame])
+    last_image = space_img.copy()
+    while output_frame < totla_frame :
+        if output_frame >= vocal_cut_withend[vocal_idx] :
+            vocal_idx += 1
+        if str(vocal_idx) in rec_dict.keys() :
+            for video_len in rec_dict[str(vocal_idx)] :
+                print(output_frame,vocal_idx,video_len,data_dict[video_len])
+                if len(data_dict[video_len]) != 0 :
+                    taked_ele = data_dict[video_len].pop(0) #random.randint(0,len(data_dict[video_len])-1))
+                    video_name = "{}_{}.mp4".format(taked_ele[0],taked_ele[1])
+                    video_path = os.path.join(cut_video_path,video_name)
+                    vidCap = cv2.VideoCapture(video_path)
+                    while True :
+                        ret = vidCap.grab()
+                        if not ret : break
+                        ret,image = vidCap.retrieve()
+                        last_image = image.copy()
+                        out.write(image)
+                        output_frame += 1
+                    vidCap.release()
+                elif output_frame < vocal_cut_withend[vocal_idx] :
+                    out.write(last_image)
+                    output_frame += 1
+                else :
+                    out.write(space_img)
+                    output_frame += 1
+        else :
+            out.write(space_img)
+            output_frame += 1
+    out.release()   #清理記憶體
+    cv2.destroyAllWindows()
+
+
+    #audioclip = AudioFileClip(r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav") #獲取音頻
+    audioclip = AudioFileClip(audio_path)
+    clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
+    new_video = clip.set_audio(audioclip)   #影片合併音頻
+    new_video.write_videofile( os.path.join(r"test.mp4")) 
+
 
     """
     cut_result = []
     for i in fft_data :
-        cut_result.append(np.max(i[:100]))
+        cut_result.append(np.max(i))
 
     
     peaks,_ = scipy.signal.find_peaks(cut_result)
@@ -102,9 +150,6 @@ def main() :
             tmp_data.append(i)
     print(tmp_data)
     #draw_single_lines(np.array(cut_result),r"F:\work\video_analyze\output","cut_reslut")
-
-
-
 
 
 
@@ -131,19 +176,21 @@ def main() :
             img.fill(200)   #填滿單色
         else :
             img.fill(0)
+        #img.fill(200)
+        #cv2.putText(img, str(i) , (10, 230), cv2.FONT_HERSHEY_SIMPLEX,2, (0, 255, 255), 1, cv2.LINE_AA)
         out.write(img)
     out.release()   #清理記憶體
     cv2.destroyAllWindows()
 
 
     
-    audioclip = AudioFileClip(r"F:\work\video_analyze\data\test.mp3") #獲取音頻
+    #audioclip = AudioFileClip(r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav") #獲取音頻
+    audioclip = AudioFileClip(audio_path)
     clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
     new_video = clip.set_audio(audioclip)   #影片合併音頻
     new_video.write_videofile( os.path.join(r"test.mp4"))    #輸出影片
+    
     """
-
-
 
     """
     fig, ax = plt.subplots( figsize = (20,8) , nrows=2, sharex=True)
@@ -179,8 +226,8 @@ def fill_fields(fields, objects_dict):
     objects = list(objects_dict.keys())
 
 
-    print(fields)
-    print(objects)
+    #print(fields)
+    #print(objects)
 
     rec_dict = {}
     obj_idx = 0
@@ -189,7 +236,7 @@ def fill_fields(fields, objects_dict):
         x = objects[obj_idx]
         gap = np.array(fields)-int(x)
         T_F , ind_list = check_list(gap>=0)
-        print( x , fields , T_F , end="\r" )
+        #print( x , fields , T_F , end="\r" )
         if T_F and objects_dict[x] != 0 :
             rec_idx = ind_list[min_index([ gap[k] for k in ind_list])[0]]
             if str(rec_idx) not in rec_dict.keys() : rec_dict[str(rec_idx)]  = []
@@ -199,73 +246,46 @@ def fill_fields(fields, objects_dict):
         else :
             obj_idx += 1
 
-    print(fields)
-    print(rec_dict)
+    #print(fields)
+    #print(rec_dict)
+    return rec_dict
 
 
-def _fill_fields(fields, objects):
-    # 按長度從小到大排序
-    fields = sorted(fields)
-    objects = sorted(objects)
-
-    # 建立一個空字典，用於儲存已經被佔用的物體和它們的位置
-    used_objects = {}
-
-    # 遍歷所有空欄位
-    for i, field in enumerate(fields):
-        # 尋找符合長度的物體
-        for j, obj in enumerate(objects):
-            if len(obj) <= field:  # 物體小於等於欄位才能放入
-                # 如果找到符合長度的物體，將它放進空欄位中
-                used_objects[obj] = i
-                objects.pop(j)
-                break
-        
-        # 如果無法找到符合長度的物體，則跳過該空欄位
-        if len(used_objects) < len(fields):
-            continue
-
-        # 如果所有空欄位都被填滿了，則退出迴圈
-        break
-
-    # 返回已經被佔用的物體和它們的位置
-    return used_objects
 
 
 def get_point(audio_file):
     # 讀取音訊檔案
-    y, sr = librosa.load(audio_file)
+    y_audio, sr_audio = librosa.load(audio_file)
 
     # 設定窗口大小和跨度
-    frame_length = 1024
+    frame_length = 100
     hop_length = 512
 
     # 計算短時能量
-    energy = librosa.feature.rms(y, frame_length=frame_length, hop_length=hop_length)[0]
+    energy = librosa.feature.rms(y=y_audio, frame_length=frame_length, hop_length=hop_length)[0]
 
 
     # 設定閾值
     threshold = 0.02
 
     # 尋找開始發聲的位置
-    onset_frames = librosa.onset.onset_detect(y=y, sr=sr, hop_length=hop_length, backtrack=False, energy=energy, 
+    onset_frames = librosa.onset.onset_detect(y=y_audio, sr=sr_audio, hop_length=hop_length, backtrack=True, energy=energy, 
                                             units='frames', pre_max=1, post_max=1, pre_avg=1, post_avg=1, 
-                                            delta=0.12, wait=0)
+                                            delta=0.15, wait=0)
 
     # 將帧位置轉換為秒
-    onset_times = librosa.frames_to_time(onset_frames, sr=sr, hop_length=hop_length)
+    onset_times = librosa.frames_to_time(onset_frames, sr=sr_audio, hop_length=hop_length)
 
-
-    clustering = DBSCAN(eps=30, min_samples=1).fit(onset_frames.reshape(-1, 1))
-    kmeans_fit = cluster.KMeans(n_clusters = 41).fit(onset_frames.reshape(-1, 1))
+    #clustering = DBSCAN(eps=10, min_samples=1).fit(onset_frames.reshape(-1, 1))
+    kmeans_fit = cluster.KMeans(n_clusters = 59).fit(onset_frames.reshape(-1, 1))
     #print(clustering.labels_)
     #print(kmeans_fit.labels_)
 
     used_label = []
     return_onset_times = []
     for i in range(len(onset_frames)) :
-        if clustering.labels_[i] not in used_label and clustering.labels_[i] != -1 :
-            used_label.append(clustering.labels_[i])
+        if kmeans_fit.labels_[i] not in used_label and kmeans_fit.labels_[i] != -1 :
+            used_label.append(kmeans_fit.labels_[i])
             return_onset_times.append(onset_times[i])
 
     # 顯示開始發聲的位置

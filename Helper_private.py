@@ -520,6 +520,10 @@ def get_fft(file_path,fps):
     #print(data.shape)
     result = fft(data,samplerate,sampling_interval) #傅立葉轉換
     return result
+####################################################################################################################################
+def single_distance(input_data):
+    return shorten_number( np.power(np.sum([ i*i for i in input_data ]),1/2) )
+
 
 if __name__ =="__main__" :
     print("This is Helper_private.")

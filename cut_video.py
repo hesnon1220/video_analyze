@@ -3,14 +3,19 @@ import os
 from tqdm import tqdm
 import time
 import threading
+import numpy as np
+from scipy import stats
 def task(video_name,var_hist_path,video_folder_path,save_path):
 
     fps = 23.98
-    sec_set = 5
-    interval_set = fps*sec_set
+    min_sec_set = 1
+    max_sec_set = 10
+    min_interval_set = fps*min_sec_set
+    max_interval_set = fps*max_sec_set
+    #interval_set = fps*sec_set
 
     var_hist = []
-    with open(var_hist_path,"r") as txtfile :
+    with open(os.path.join(var_hist_path,"%s_hist_var.txt"%(video_name)),"r") as txtfile :
         lines = txtfile.readlines()
         for i in lines :
             var_hist.append(eval(i))
@@ -28,12 +33,14 @@ def task(video_name,var_hist_path,video_folder_path,save_path):
         if rec_state and ( var_hist[i] < 0.8 ) :
             rec_state = False
             end_frame = i
-            if (( end_frame - 5 ) - ( start_frame + 5 ) > interval_set) : 
-                if not ( min(tmp_hist[5:-5]) > 0.95 ) :
+            if (( end_frame - 5 ) - ( start_frame + 5 ) > min_interval_set) and (( end_frame - 5 ) - ( start_frame + 5 ) < max_interval_set) : 
+                if not ( np.min(tmp_hist[5:-5]) > 0.9 ) :
+                #mode = stats.mode(np.array(tmp_hist[5:-5]),axis=None, keepdims=True)[0]
+                #if not mode[0] > 0.9  :
                     cut_point.append( (start_frame+5,end_frame-5) )
             tmp_hist = []
 
-    
+
     vidCap = cv2.VideoCapture(os.path.join(video_folder_path,"%s.mp4"%(video_name)))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     frame_width  = int(vidCap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -85,9 +92,9 @@ class MyThread(threading.Thread):
 
 def main() :
 
-    var_hist_path = r""
-    video_folder_path = r""
-    save_path = r""
+    var_hist_path = r"F:\work\video_analyze\output\var_hist\Beelzebub-jou no Okinimesu mama"
+    video_folder_path = r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama"
+    save_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
 
     max_deals = 16
     semaphore = threading.BoundedSemaphore(max_deals)
