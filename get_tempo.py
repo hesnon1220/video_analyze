@@ -77,10 +77,7 @@ def main() :
 
     rec_dict = fill_fields(invert_data,count_dict)
 
-
-
-
-
+    
     fourcc = cv2.VideoWriter_fourcc(*'XVID')    #輸出影像設定
     out = cv2.VideoWriter( os.path.join('test.avi'), fourcc, fps, (1280,720))   #輸出無聲長條影像
 
@@ -130,7 +127,7 @@ def main() :
     clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
     new_video = clip.set_audio(audioclip)   #影片合併音頻
     new_video.write_videofile( os.path.join(r"test.mp4")) 
-
+    
 
     """
     cut_result = []
@@ -222,7 +219,7 @@ def min_index(lst):
 
 def fill_fields(fields, objects_dict):
 
-
+    origin_fields = fields.copy()
     objects = list(objects_dict.keys())
 
 
@@ -246,7 +243,9 @@ def fill_fields(fields, objects_dict):
         else :
             obj_idx += 1
 
-    #print(fields)
+
+    print(origin_fields)
+    print(fields)
     #print(rec_dict)
     return rec_dict
 
@@ -258,7 +257,7 @@ def get_point(audio_file):
     y_audio, sr_audio = librosa.load(audio_file)
 
     # 設定窗口大小和跨度
-    frame_length = 100
+    frame_length = 64
     hop_length = 512
 
     # 計算短時能量
@@ -271,7 +270,7 @@ def get_point(audio_file):
     # 尋找開始發聲的位置
     onset_frames = librosa.onset.onset_detect(y=y_audio, sr=sr_audio, hop_length=hop_length, backtrack=True, energy=energy, 
                                             units='frames', pre_max=1, post_max=1, pre_avg=1, post_avg=1, 
-                                            delta=0.15, wait=0)
+                                            delta=0.15, wait=10)
 
     # 將帧位置轉換為秒
     onset_times = librosa.frames_to_time(onset_frames, sr=sr_audio, hop_length=hop_length)
