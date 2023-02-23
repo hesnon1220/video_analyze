@@ -13,16 +13,32 @@ import yaml
 def main() :
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     predict_model = torch.hub.load('ultralytics/yolov5', 'yolov5x6')
-    predict_model.iou = 0.3
-    predict_model.conf = 0.5
-
+    #predict_model.iou = 0.3
+    #predict_model.conf = 0.5
     predict_model.to(device)
 
-    img = cv2.imread(r"D:\video_analyze\data\n-b8c7ab59772e092f,ch1_s-20220920180000_e-190000.mp4_20230220_101007.380.jpg")
-    predict_result = predict_model(img)
-    data_frame = dataframe_change(predict_result.pandas().xyxy)
-    print(data_frame)
-    pass
+
+    with open( "coco128.yml" ,"r" ) as yamlfile :
+        class_name = yaml.load(yamlfile,Loader=yaml.Loader)
+
+    print(class_name["names"])
+    
+
+    vidCap = cv2.VideoCapture(r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama\[Erai-raws] Beelzebub-jou no Okinimesu mama - 01 [720p][Multiple Subtitle]_11.mp4")
+
+    while True :
+        ret = vidCap.grab()
+        if not ret : break
+        ret,image = vidCap.retrieve()
+        predict_result = predict_model(image)
+        data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
+        item_list = []
+        for i in data_frame :
+            item_list.append(class_name["names"][i[-1]])
+        print(item_list)
+    
+
+
 
 
 if __name__ == "__main__" :
