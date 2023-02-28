@@ -9,7 +9,7 @@ def task(video_name,var_hist_path,video_folder_path,save_path):
 
     fps = 23.98
     min_sec_set = 1
-    max_sec_set = 10
+    max_sec_set = 5
     min_interval_set = fps*min_sec_set
     max_interval_set = fps*max_sec_set
     #interval_set = fps*sec_set
@@ -33,11 +33,16 @@ def task(video_name,var_hist_path,video_folder_path,save_path):
         if rec_state and ( var_hist[i] < 0.8 ) :
             rec_state = False
             end_frame = i
-            if (( end_frame - 5 ) - ( start_frame + 5 ) > min_interval_set) and (( end_frame - 5 ) - ( start_frame + 5 ) < max_interval_set) : 
-                if not ( np.min(tmp_hist[5:-5]) > 0.9 ) :
+            if (( end_frame - 5 ) - ( start_frame + 5 ) > min_interval_set):
+                #if not ( np.mix(tmp_hist[5:-5]) > 0.9 ) :
+                middle_point = (start_frame + end_frame)/2
+                left_point = max(start_frame+5,int( middle_point - max_interval_set / 2 ))
+                right_point = min(end_frame-5,int( middle_point + max_interval_set/2 ))
+                if not ( np.mean(np.array(tmp_hist[left_point:right_point]) >0.95) > 0.7 ) :
                 #mode = stats.mode(np.array(tmp_hist[5:-5]),axis=None, keepdims=True)[0]
                 #if not mode[0] > 0.9  :
-                    cut_point.append( (start_frame+5,end_frame-5) )
+                    cut_point.append( (left_point,right_point) )
+                    #cut_point.append( (start_frame+5,end_frame-5) )
             tmp_hist = []
 
 

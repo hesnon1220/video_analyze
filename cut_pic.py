@@ -1,10 +1,11 @@
 import cv2
 import os
+from tqdm import tqdm
 
 def main():
     video_folder = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
     output_path = r"F:\work\video_analyze\output\img\cutimg"
-    for idx,ele in enumerate( os.listdir(video_folder)) :
+    for idx,ele in tqdm(enumerate( os.listdir(video_folder))) :
         video_path = os.path.join( video_folder , ele )
         vidCap = cv2.VideoCapture(video_path)
         ret = vidCap.grab()

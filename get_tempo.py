@@ -14,25 +14,29 @@ from sklearn.cluster import DBSCAN
 from sklearn import cluster
 import re
 import random
-
+import yaml
 def main() :
     
-    fps = 23.98
+    fps = 23.976
 
     #audio_path = os.path.join(r"F:\work\video_analyze\separated\htdemucs\test",i)
     audio_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\01.ピンクレモネード.mp3"
     y,sr = librosa.load(audio_path)
     fft_data = get_fft(audio_path,fps)
+    print(np.array(fft_data).shape)
 
-
+    """
     vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
     vocal_point = get_point(vocal_path)
     vocal_cut = np.array(np.array(vocal_point)*fps,dtype="uint64")
-
+    """
     #print(y.shape)
     #print(sr)
-
-
+    with open(r"F:\work\video_analyze\output\lnc_time.txt","r") as txt_file :
+        line = txt_file.readline()
+        lnc_time = np.array(list(map(float,line.replace("\r","").split("\t"))))
+    print(np.array(lnc_time*fps,dtype = "uint64"))
+    vocal_cut = np.array(lnc_time*fps,dtype = "uint64")
 
     invert_data = []
     step_num = 0
@@ -62,17 +66,17 @@ def main() :
     point_cut = np.array(np.array(tmp_time)*fps,dtype="uint64")
 
 
-    fft_data = get_fft(vocal_path,fps)
+    #fft_data = get_fft(vocal_path,fps)
 
 
-    data_dict = get_cut_video_dict(r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama")
+    data_dict = get_cut_video_dict()
 
     sorted_cut_data = sorted(list(map(int,data_dict.keys())),reverse=True)
 
 
     count_dict = {}
     for i in sorted_cut_data :
-        count_dict[str(i)] = len(data_dict[str(i)])
+        count_dict[i] = len(data_dict[i])
 
 
     rec_dict = fill_fields(invert_data,count_dict)
@@ -103,7 +107,7 @@ def main() :
                     vidCap = cv2.VideoCapture(video_path)
                     while True :
                         ret = vidCap.grab()
-                        if not ret : break
+                        if not ret or output_frame >= totla_frame: break
                         ret,image = vidCap.retrieve()
                         last_image = image.copy()
                         out.write(image)
@@ -127,7 +131,6 @@ def main() :
     clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
     new_video = clip.set_audio(audioclip)   #影片合併音頻
     new_video.write_videofile( os.path.join(r"test.mp4")) 
-    
 
     """
     cut_result = []
@@ -148,20 +151,26 @@ def main() :
     print(tmp_data)
     #draw_single_lines(np.array(cut_result),r"F:\work\video_analyze\output","cut_reslut")
 
-
-
+    with open(r"F:\work\video_analyze\output\lnc_time.txt","r") as txt_file :
+        line = txt_file.readline()
+        lnc_time = list(map(float,line.replace("\r","").split("\t")))
+    print(lnc_time)
     
-    x_bar = np.arange( 0 , len( cut_result ) , 1 )
+    x_bar = np.arange( 0 , len( cut_result ) , 1 ) / fps
     #peaks = scipy.signal.find_peaks_cwt(input_data,5)
     
     fig = plt.figure(figsize=(70,8))
     plt.subplot(111)
     plt.plot( x_bar , cut_result , c = "r" )
-    plt.scatter(tmp_data, np.array(cut_result)[tmp_data])
+    #plt.scatter(tmp_data/fps, np.array(cut_result)[tmp_data])
     plt.vlines(x_bar[vocal_cut], 0, max(cut_result), alpha=0.5, color='r',linestyle='--', label='Beats')
+    plt.vlines(lnc_time, 0, max(cut_result), alpha=0.5, color='b',linestyle='--', label='lnc')
     plt.savefig(os.path.join(r"F:\work\video_analyze\output","{}.png".format("cut_reslut")),bbox_inches='tight',pad_inches = 0)
     plt.close('all')
+    """
 
+
+    """
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')    #輸出影像設定
     out = cv2.VideoWriter( os.path.join('test.avi'), fourcc, fps, (240,240))   #輸出無聲長條影像
@@ -238,7 +247,7 @@ def fill_fields(fields, objects_dict):
             rec_idx = ind_list[min_index([ gap[k] for k in ind_list])[0]]
             if str(rec_idx) not in rec_dict.keys() : rec_dict[str(rec_idx)]  = []
             rec_dict[str(rec_idx)].append(x)
-            fields[rec_idx] -= int(x)
+            fields[rec_idx] -= x
             objects_dict[x] -= 1
         else :
             obj_idx += 1
@@ -262,13 +271,29 @@ def get_point(audio_file):
 
     # 計算短時能量
     energy = librosa.feature.rms(y=y_audio, frame_length=frame_length, hop_length=hop_length)[0]
+    ZCR = librosa.feature.zero_crossing_rate(y=y_audio, frame_length=frame_length, hop_length=hop_length)[0]
+    print(len(y_audio))
+    print(sr_audio)
+    print(len(energy))
+    print(energy)
+    print(len(ZCR))
+
+    x_bar = np.arange( 0 , len( energy ) , 1 )
+    fig = plt.figure(figsize=(70,8))
+    plt.subplot(111)
+    plt.plot( x_bar , ZCR , c = "b" )
+    plt.plot( x_bar , energy , c = "r" )
+    #plt.scatter(tmp_data/fps, np.array(cut_result)[tmp_data])
+    plt.savefig(os.path.join(r"F:\work\video_analyze\output","{}.png".format("cut_reslut_2")),bbox_inches='tight',pad_inches = 0)
+    plt.close('all')
+
 
 
     # 設定閾值
     threshold = 0.02
 
     # 尋找開始發聲的位置
-    onset_frames = librosa.onset.onset_detect(y=y_audio, sr=sr_audio, hop_length=hop_length, backtrack=True, energy=energy, 
+    onset_frames = librosa.onset.onset_detect(y=y_audio, sr=sr_audio, hop_length=hop_length, backtrack=True, energy=ZCR, 
                                             units='frames', pre_max=1, post_max=1, pre_avg=1, post_avg=1, 
                                             delta=0.15, wait=10)
 
@@ -317,27 +342,55 @@ def calVolumeDB(waveData, frameSize, overLap):
     return volume
 
 
-def get_cut_video_dict(video_path):
+def get_cut_video_dict():
+
+
+    with open(r"F:\work\video_analyze\video_dict.yaml","r") as yaml_file :
+        video_dict = yaml.load(yaml_file,Loader=yaml.Loader)
+
+    pick_video = []
+    for key,value in video_dict.items() :
+        tmp_dict = video_dict[key]
+        pick_score = max((tmp_dict["charater"]/tmp_dict["frame_num"] >= 1 ),(tmp_dict["creature"] > 0))*( tmp_dict["text"] == 0 )
+        if pick_score : pick_video.append([key,tmp_dict["frame_num"]])
+
     return_dict = {}
-    pattern = r"(.+?)_(\d+)\.mp4$"
-    for i in os.listdir(video_path) :
-        vidCap = cv2.VideoCapture(os.path.join(video_path,i))
-        match = re.search(pattern, i)
-        # 提取匹配的結果
+    pattern = r"(.+?)_(\d+)"
+    for i in pick_video :
+        match = re.search(pattern, i[0])
+        frame_count = i[1]
         if match:
             name = match.group(1)
             num = match.group(2)
-            frame_count = str(int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT)))
             if frame_count not in return_dict.keys() : return_dict[frame_count] = []
             return_dict[frame_count].append([name,num])
-        else:
-            print("No match")
-
-        # 釋放資源
-        vidCap.release()
+        else : print("No match")
+    
     return return_dict
-        
 
+
+
+"""
+return_dict = {}
+pattern = r"(.+?)_(\d+)\.mp4$"
+for i in os.listdir(video_path) :
+    vidCap = cv2.VideoCapture(os.path.join(video_path,i))
+    match = re.search(pattern, i)
+    # 提取匹配的結果
+    if match:
+        name = match.group(1)
+        num = match.group(2)
+        frame_count = str(int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT)))
+        if frame_count not in return_dict.keys() : return_dict[frame_count] = []
+        return_dict[frame_count].append([name,num])
+    else:
+        print("No match")
+
+    # 釋放資源
+    vidCap.release()
+
+return return_dict
+"""
 
 
 if __name__ == "__main__" :
