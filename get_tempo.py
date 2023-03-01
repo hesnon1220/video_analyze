@@ -25,7 +25,7 @@ def main() :
     fft_data = get_fft(audio_path,fps)
     print(np.array(fft_data).shape)
 
-    """
+    """s
     vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
     vocal_point = get_point(vocal_path)
     vocal_cut = np.array(np.array(vocal_point)*fps,dtype="uint64")
@@ -55,7 +55,7 @@ def main() :
     #print(librosa.frames_to_time(beats, sr=sr))
     onset_env = librosa.onset.onset_strength(y=y, sr=sr,aggregate=np.median)
 
-
+    print(onset_env)
     
 
     tmp_beats = []
@@ -351,7 +351,10 @@ def get_cut_video_dict():
     pick_video = []
     for key,value in video_dict.items() :
         tmp_dict = video_dict[key]
-        pick_score = max((tmp_dict["charater"]/tmp_dict["frame_num"] >= 1 ),(tmp_dict["creature"] > 0))*( tmp_dict["text"] == 0 )
+        #pick_score = max((tmp_dict["charater"]/tmp_dict["frame_num"] >= 1 ),(tmp_dict["creature"] > 0))*( tmp_dict["text"] == 0 )
+
+        pick_score = (tmp_dict["Beelzebub"]/tmp_dict["frame_num"] >= 1 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )
+
         if pick_score : pick_video.append([key,tmp_dict["frame_num"]])
 
     return_dict = {}

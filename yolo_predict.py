@@ -13,15 +13,15 @@ import threading
 
 
 def video_predict(video_path,predict_model) :
-    class_num = ["charater","creature","text"]
+    class_num = ["creature","text","Beelzebub","title"]
     vidCap = cv2.VideoCapture(video_path)
     return_dict = {
         "frame_num" : 0 ,
-        "charater" : 0 ,
-        "creature" : 0 ,
-        "text" : 0
+        "creature" : 0,
+        "text" : 0,
+        "Beelzebub" : 0,
+        "title" : 0
     }
-    fram_num = 0
     while True :
         ret = vidCap.grab()
         if not ret : break
@@ -68,9 +68,9 @@ def main() :
 
     #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device("cuda:0")
-    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp3\weights\best.pt")
+    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp7\weights\best.pt")
     predict_model.iou = 0.3
-    predict_model.conf = 0.5
+    predict_model.conf = 0.8
     predict_model.to(device)
 
     base_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
