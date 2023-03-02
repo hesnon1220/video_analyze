@@ -18,14 +18,14 @@ import yaml
 def main() :
     
     fps = 23.976
-
+    
     #audio_path = os.path.join(r"F:\work\video_analyze\separated\htdemucs\test",i)
     audio_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\01.ピンクレモネード.mp3"
     y,sr = librosa.load(audio_path)
     fft_data = get_fft(audio_path,fps)
     print(np.array(fft_data).shape)
 
-    """s
+    """
     vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
     vocal_point = get_point(vocal_path)
     vocal_cut = np.array(np.array(vocal_point)*fps,dtype="uint64")
@@ -37,15 +37,15 @@ def main() :
         lnc_time = np.array(list(map(float,line.replace("\r","").split("\t"))))
     print(np.array(lnc_time*fps,dtype = "uint64"))
     vocal_cut = np.array(lnc_time*fps,dtype = "uint64")
-
+    
     invert_data = []
     step_num = 0
     for i in range(len(vocal_cut)) :
         invert_data.append(int(vocal_cut[i]-step_num))
         step_num = vocal_cut[i]
     invert_data.append(int(len(fft_data)-step_num ))
-
-
+    print(invert_data)
+    
 
     tempo,beats = librosa.beat.beat_track(y=y,sr=sr)
 
@@ -55,29 +55,31 @@ def main() :
     #print(librosa.frames_to_time(beats, sr=sr))
     onset_env = librosa.onset.onset_strength(y=y, sr=sr,aggregate=np.median)
 
-    print(onset_env)
-    
 
-    tmp_beats = []
-    for i in range(len(beats)):
-        if i%4 == 0 :
-            tmp_beats.append(beats[i])
-    tmp_time = librosa.frames_to_time(tmp_beats, sr=sr)
-    point_cut = np.array(np.array(tmp_time)*fps,dtype="uint64")
+    #tmp_beats = []
+    #for i in range(len(beats)):
+    #    if i%4 == 0 :
+    #        tmp_beats.append(beats[i])
+    #tmp_time = librosa.frames_to_time(tmp_beats, sr=sr)
+    #point_cut = np.array(np.array(tmp_time)*fps,dtype="uint64")
 
 
     #fft_data = get_fft(vocal_path,fps)
 
-
+    
     data_dict = get_cut_video_dict()
-
+    print(data_dict)
+    
     sorted_cut_data = sorted(list(map(int,data_dict.keys())),reverse=True)
+
+    print(sorted_cut_data)
 
 
     count_dict = {}
     for i in sorted_cut_data :
         count_dict[i] = len(data_dict[i])
 
+    print(count_dict)
 
     rec_dict = fill_fields(invert_data,count_dict)
 
@@ -91,6 +93,7 @@ def main() :
 
     space_img = np.zeros(( 720,1280, 3), np.uint8)
 
+    
     totla_frame = int(len(y)/sr*fps)
     vocal_cut_withend = np.append(vocal_cut,[totla_frame])
     last_image = space_img.copy()
@@ -124,7 +127,7 @@ def main() :
             output_frame += 1
     out.release()   #清理記憶體
     cv2.destroyAllWindows()
-
+    
 
     #audioclip = AudioFileClip(r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav") #獲取音頻
     audioclip = AudioFileClip(audio_path)
@@ -232,7 +235,7 @@ def fill_fields(fields, objects_dict):
     objects = list(objects_dict.keys())
 
 
-    #print(fields)
+    print(fields)
     #print(objects)
 
     rec_dict = {}
@@ -242,7 +245,7 @@ def fill_fields(fields, objects_dict):
         x = objects[obj_idx]
         gap = np.array(fields)-int(x)
         T_F , ind_list = check_list(gap>=0)
-        #print( x , fields , T_F , end="\r" )
+        #print( fields )
         if T_F and objects_dict[x] != 0 :
             rec_idx = ind_list[min_index([ gap[k] for k in ind_list])[0]]
             if str(rec_idx) not in rec_dict.keys() : rec_dict[str(rec_idx)]  = []
@@ -255,7 +258,7 @@ def fill_fields(fields, objects_dict):
 
     print(origin_fields)
     print(fields)
-    #print(rec_dict)
+    print(rec_dict)
     return rec_dict
 
 
