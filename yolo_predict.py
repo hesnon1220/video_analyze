@@ -1,5 +1,5 @@
 from typing import List
-from Helper_private import coord_change,dataframe_change,sigmoid,fixed_area_detect
+from Helper_private import coord_change,dataframe_change,sigmoid,fixed_area_detect,shorten_number
 import torch
 from tqdm import tqdm
 import os
@@ -20,16 +20,25 @@ def video_predict(video_path,predict_model) :
         "creature" : 0,
         "text" : 0,
         "Beelzebub" : 0,
-        "title" : 0
+        "title" : 0,
+        "gray_mean" : [],
+        "gray_std" : [],
     }
     while True :
         ret = vidCap.grab()
         if not ret : break
         ret,image = vidCap.retrieve()
+        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        return_dict["gray_mean"].append( shorten_number(np.mean(gray_image)))
+        return_dict["gray_std"].append(shorten_number(np.std(gray_image)))
         predict_result = predict_model(image)
         data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
         for i in data_frame :
-            return_dict[class_num[int(i[-1])]] += 1
+            if i[-1] == 2  :
+                if i[-2] >= 0.8 : return_dict["Beelzebub"] += 1
+            elif i[-1] == 0 :
+                if i[-2] >= 0.8 : return_dict["creature"] += 1
+            else : return_dict[class_num[int(i[-1])]] += 1
         return_dict["frame_num"] += 1
     vidCap.release()
     cv2.destroyAllWindows()
@@ -70,7 +79,7 @@ def main() :
     device = torch.device("cuda:0")
     predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp7\weights\best.pt")
     predict_model.iou = 0.3
-    predict_model.conf = 0.8
+    predict_model.conf = 0.2
     predict_model.to(device)
 
     base_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"

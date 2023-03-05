@@ -15,6 +15,12 @@ from sklearn import cluster
 import re
 import random
 import yaml
+
+
+def chage_speed() :
+    pass
+
+
 def main() :
     
     fps = 23.976
@@ -97,32 +103,41 @@ def main() :
     totla_frame = int(len(y)/sr*fps)
     vocal_cut_withend = np.append(vocal_cut,[totla_frame])
     last_image = space_img.copy()
+    last_output_frame = 0
     while output_frame < totla_frame :
+        last_output_frame = output_frame
         if output_frame >= vocal_cut_withend[vocal_idx] :
             vocal_idx += 1
         if str(vocal_idx) in rec_dict.keys() :
-            for video_len in rec_dict[str(vocal_idx)] :
-                print(output_frame,vocal_idx,video_len,data_dict[video_len])
-                if len(data_dict[video_len]) != 0 :
-                    taked_ele = data_dict[video_len].pop(0) #random.randint(0,len(data_dict[video_len])-1))
+            #for video_len in rec_dict[str(vocal_idx)] :
+            if len(rec_dict[str(vocal_idx)]) > 0 :
+                video_len = rec_dict[str(vocal_idx)].pop(0)
+                print(output_frame,vocal_idx,video_len,data_dict[video_len[0]])
+                if len(data_dict[video_len[0]]) != 0 :
+                    taked_ele = data_dict[video_len[0]].pop(0) #random.randint(0,len(data_dict[video_len])-1))
                     video_name = "{}_{}.mp4".format(taked_ele[0],taked_ele[1])
                     video_path = os.path.join(cut_video_path,video_name)
                     vidCap = cv2.VideoCapture(video_path)
-                    while True :
-                        ret = vidCap.grab()
-                        if not ret or output_frame >= totla_frame: break
-                        ret,image = vidCap.retrieve()
-                        last_image = image.copy()
+                    length = int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    speed_spot = np.linspace(0,length,length+1) * max(length,video_len[1]) / length
+                    img_idx = 0
+                    #while tmp_len < video_len[1] :
+                    for write_idx in range(video_len[1]) :
+                        if write_idx >=  speed_spot[img_idx] :
+                            ret = vidCap.grab()
+                            if not ret or output_frame >= totla_frame: break
+                            ret,image = vidCap.retrieve()
+                            #cv2.putText(image, "{}-{}-{}".format(vocal_idx,output_frame,write_idx) , (10, 230), cv2.FONT_HERSHEY_SIMPLEX,2, (0, 0, 0), 1, cv2.LINE_AA)
+                            img_idx += 1
+                            #last_image = image.copy()
                         out.write(image)
                         output_frame += 1
                     vidCap.release()
-                elif output_frame < vocal_cut_withend[vocal_idx] :
-                    out.write(last_image)
-                    output_frame += 1
-                else :
-                    out.write(space_img)
-                    output_frame += 1
-        else :
+                #elif output_frame < vocal_cut_withend[vocal_idx] :
+                    #out.write(last_image)
+                    #output_frame += 1
+        if output_frame == last_output_frame :
+            print(output_frame)
             out.write(space_img)
             output_frame += 1
     out.release()   #清理記憶體
@@ -134,6 +149,7 @@ def main() :
     clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
     new_video = clip.set_audio(audioclip)   #影片合併音頻
     new_video.write_videofile( os.path.join(r"test.mp4")) 
+    
 
     """
     cut_result = []
@@ -227,16 +243,15 @@ def min_index(lst):
     min_val = min(lst)
     return [i for i, x in enumerate(lst) if x == min_val]
 
-
+def max_index(lst):
+    max_val = max(lst)
+    return [i for i, x in enumerate(lst) if x == max_val]
 
 def fill_fields(fields, objects_dict):
 
     origin_fields = fields.copy()
     objects = list(objects_dict.keys())
 
-
-    print(fields)
-    #print(objects)
 
     rec_dict = {}
     obj_idx = 0
@@ -245,13 +260,15 @@ def fill_fields(fields, objects_dict):
         x = objects[obj_idx]
         gap = np.array(fields)-int(x)
         T_F , ind_list = check_list(gap>=0)
-        #print( fields )
-        if T_F and objects_dict[x] != 0 :
+        print(fields)
+        #print(rec_dict)
+        if T_F and x in objects_dict.keys() :
             rec_idx = ind_list[min_index([ gap[k] for k in ind_list])[0]]
             if str(rec_idx) not in rec_dict.keys() : rec_dict[str(rec_idx)]  = []
-            rec_dict[str(rec_idx)].append(x)
+            rec_dict[str(rec_idx)].append([x,x])
             fields[rec_idx] -= x
             objects_dict[x] -= 1
+            if objects_dict[x] == 0 : del objects_dict[x]
         else :
             obj_idx += 1
 
@@ -259,6 +276,29 @@ def fill_fields(fields, objects_dict):
     print(origin_fields)
     print(fields)
     print(rec_dict)
+    #######################################################################################
+    for idx,ele in enumerate(fields) :
+        if (ele != 0) and (str(idx) in rec_dict.keys()):
+            len_list = rec_dict[str(idx)]
+            max_idx = max_index([i[0] for i in len_list])[0]
+            max_len = len_list[max_idx][0]
+            if (max_len + ele) / max_len <= 1.2 :
+                rec_dict[str(idx)][max_idx][1] = max_len + ele
+                fields[idx] = 0
+    print(fields)
+    print(rec_dict)
+    #######################################################################################
+    if max(fields) != 0 and  objects_dict != {} :
+        objects = list(objects_dict.keys())
+        for idx,ele in enumerate(fields) :
+            if ele != 0 :
+                gap = np.array(objects)-int(ele)
+                min_obj = objects[min_index(gap)[0]]
+                if str(idx) not in rec_dict.keys() : rec_dict[str(idx)]  = []
+                rec_dict[str(rec_idx)].append([min_obj,ele])
+                fields[idx] -= ele
+                objects_dict[min_obj] -= 1
+                if objects_dict[min_obj] == 0 : del objects_dict[min_obj]
     return rec_dict
 
 
@@ -355,8 +395,9 @@ def get_cut_video_dict():
     for key,value in video_dict.items() :
         tmp_dict = video_dict[key]
         #pick_score = max((tmp_dict["charater"]/tmp_dict["frame_num"] >= 1 ),(tmp_dict["creature"] > 0))*( tmp_dict["text"] == 0 )
-
-        pick_score = (tmp_dict["Beelzebub"]/tmp_dict["frame_num"] >= 1 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )
+        gray_mean = tmp_dict["gray_mean"]
+        gray_std = tmp_dict["gray_std"]
+        pick_score = (tmp_dict["Beelzebub"]/tmp_dict["frame_num"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min(gray_mean) >= 150 )*( min( gray_std ) >= 15 )
 
         if pick_score : pick_video.append([key,tmp_dict["frame_num"]])
 

@@ -37,25 +37,26 @@ def task(video_name,var_hist_path,video_folder_path,save_path):
                 #if not ( np.mix(tmp_hist[5:-5]) > 0.9 ) :
                 middle_point = (start_frame + end_frame)/2
                 left_point = max(start_frame+5,int( middle_point - max_interval_set / 2 ))
-                right_point = min(end_frame-5,int( middle_point + max_interval_set/2 ))
-                if not ( np.mean(np.array(tmp_hist[left_point:right_point]) >0.95) > 0.7 ) :
-                #mode = stats.mode(np.array(tmp_hist[5:-5]),axis=None, keepdims=True)[0]
-                #if not mode[0] > 0.9  :
-                    cut_point.append( (left_point,right_point) )
-                    #cut_point.append( (start_frame+5,end_frame-5) )
+                right_point = min(end_frame-5,int( middle_point + max_interval_set / 2 ))
+                if len(var_hist[left_point:right_point]) != 0 :
+                    if not ( np.mean(np.array(var_hist[left_point:right_point]) >0.95) > 0.7 ) :
+                    #mode = stats.mode(np.array(tmp_hist[5:-5]),axis=None, keepdims=True)[0]
+                    #if not mode[0] > 0.9  :
+                        cut_point.append( (left_point,right_point) )
+                        #cut_point.append( (start_frame+5,end_frame-5) )
             tmp_hist = []
-
 
     vidCap = cv2.VideoCapture(os.path.join(video_folder_path,"%s.mp4"%(video_name)))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     frame_width  = int(vidCap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(vidCap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     FPS = vidCap.get(cv2.CAP_PROP_FPS)
+    #FPS = 25
 
     cut_point_idx = 0
     #out = cv2.VideoWriter(os.path.join(cut_video_path,"%s_%s.mp4"%(pic_name,)),fourcc, FPS, (int(frame_width),int(frame_height)))
     frame_num = 0
-
+    
     cut_state = False
     while True :
         ret = vidCap.grab()
@@ -79,7 +80,6 @@ def task(video_name,var_hist_path,video_folder_path,save_path):
     vidCap.release()
     cv2.destroyAllWindows()
 
-
 class MyThread(threading.Thread):
     def __init__(self, video_name,var_hist_path,video_folder_path,save_path,semaphore):
         threading.Thread.__init__(self)
@@ -101,7 +101,7 @@ def main() :
     video_folder_path = r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama"
     save_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
 
-    max_deals = 16
+    max_deals = 10
     semaphore = threading.BoundedSemaphore(max_deals)
     threads = []
     for i in os.listdir(var_hist_path) :
