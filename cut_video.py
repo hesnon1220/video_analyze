@@ -8,6 +8,11 @@ from scipy import stats
 def task(video_name,var_hist_path,video_folder_path,save_path):
 
     fps = 23.98
+    start_point = int(fps*(1*60+40))
+    end_point = int(fps*(9*60+10))
+
+
+
     min_sec_set = 1
     max_sec_set = 5
     min_interval_set = fps*min_sec_set
@@ -24,13 +29,13 @@ def task(video_name,var_hist_path,video_folder_path,save_path):
     cut_point = []
     rec_state = False
     tmp_hist = []
-    for i in range(len(var_hist)) :
+    for i in range(start_point,end_point) :
         if rec_state : tmp_hist.append(var_hist[i])
         if not rec_state and not ( var_hist[i] < 0.8 ) :
             rec_state = True
             start_frame = i
             continue
-        if rec_state and ( var_hist[i] < 0.8 ) :
+        if rec_state and ( ( var_hist[i] < 0.8 ) or i == end_point-1) :
             rec_state = False
             end_frame = i
             if (( end_frame - 5 ) - ( start_frame + 5 ) > min_interval_set):
@@ -97,9 +102,9 @@ class MyThread(threading.Thread):
 
 def main() :
 
-    var_hist_path = r"F:\work\video_analyze\output\var_hist\Beelzebub-jou no Okinimesu mama"
-    video_folder_path = r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama"
-    save_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
+    var_hist_path = r"F:\work\video_analyze\output\var_hist\Detective Conan The Culprit Hanzawa"
+    video_folder_path = r"F:\work\video_analyze\data\video\Detective Conan The Culprit Hanzawa"
+    save_path = r"F:\work\video_analyze\output\cut_video\Detective Conan The Culprit Hanzawa"
 
     max_deals = 10
     semaphore = threading.BoundedSemaphore(max_deals)

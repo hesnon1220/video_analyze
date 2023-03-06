@@ -1,9 +1,9 @@
 import shutil
 import os
 
-img_path = r"F:\work\video_analyze\output\train_data_2\images\no_train"
-label_path = r"F:\work\video_analyze\output\train_data_2\labels\train"
-target_path = r"F:\work\video_analyze\output\train_data_2\images\train"
+img_path = r"F:\work\video_analyze\output\cutimg"
+label_path = r"F:\work\video_analyze\output\train_data\labels"
+target_path = r"F:\work\video_analyze\output\train_data\images"
 
 
 for i in os.listdir(label_path) :

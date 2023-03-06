@@ -9,10 +9,10 @@ from Helper_private import shorten_number
 
 def main():
 
-    data_path = r"F:\work\video_analyze\output\var_hist\Beelzebub-jou no Okinimesu mama"
+    data_path = r"F:\work\video_analyze\output\var_hist\Detective Conan The Culprit Hanzawa"
     data_list = os.listdir(data_path)
 
-    output_path = r"F:\work\video_analyze\output\img\Beelzebub-jou no Okinimesu mama"
+    output_path = r"F:\work\video_analyze\output\img\Detective Conan The Culprit Hanzawa"
     for i in tqdm(data_list) :
         pic_name = i.replace("txt","")
         var_hist = []

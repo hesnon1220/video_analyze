@@ -10,13 +10,11 @@ def task(video_name,data_floder,output_floder) :
     video_name = video_name.replace(".mp4","")
     vidCap = cv2.VideoCapture(video_path)
     #fps = 23
-    loop_num = 100
+    loop_num = 1
     frame_num = 0
     stop_num = 0
     pic_num = 0
-
     hist_list = []
-
     while True :
         ret = vidCap.grab()
         if not ret : break
@@ -24,25 +22,25 @@ def task(video_name,data_floder,output_floder) :
         if frame_num == 0 :
             start_time = time.time()
             ret,image = vidCap.retrieve()
+            gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             #tmp_img = cv2.resize(image,[256,256])
-            #hist_list.append(get_hist(image))
-            cv2.imwrite(os.path.join(output_floder,"{}_{}.png".format(video_name,pic_num)) ,image )
+            hist_list.append(get_hist(gray_img))
+            #cv2.imwrite(os.path.join(output_floder,"{}_{}.png".format(video_name,pic_num)) ,image )
             pic_num += 1
             stop_num += 1
             end_time = time.time()
             print(" {} process : {} --- {:.2f} it/s".format(video_name,stop_num,1/(end_time-start_time)),end="\r")
         frame_num = ( frame_num + 1 ) % loop_num
 
-    #hist_var = []
-    #for i in range(len(hist_list)-1) :
-        #hist_var.append(hist_similar(hist_list[i],hist_list[i+1]))
-    #print(hist_var)
 
-    """
+    hist_var = []
+    for i in range(len(hist_list)-1) :
+        hist_var.append(hist_similar(hist_list[i],hist_list[i+1]))
+
     with open(os.path.join(output_floder,"{}_hist_var.txt".format(video_name)),"w") as txtfile:
         for i in range(len(hist_list)-1) :
             print(hist_similar(hist_list[i],hist_list[i+1]),file=txtfile)
-    """
+    
     vidCap.release()
     cv2.destroyAllWindows()
 
@@ -59,9 +57,9 @@ class MyThread(threading.Thread):
             task(self.video_name,self.data_floder,self.output_floder)
 def main():
 
-    data_floder = r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama"
+    data_floder = r"F:\work\video_analyze\data\video\Detective Conan The Culprit Hanzawa"
     #output_floder = r"F:\work\video_analyze\output\var_hist\Beelzebub-jou no Okinimesu mama"
-    output_floder = r"F:\work\video_analyze\output\train_data\images"
+    output_floder = r"F:\work\video_analyze\output\var_hist\Detective Conan The Culprit Hanzawa"
 
     max_deals = 16
     semaphore = threading.BoundedSemaphore(max_deals)

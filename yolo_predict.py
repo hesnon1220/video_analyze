@@ -13,13 +13,12 @@ import threading
 
 
 def video_predict(video_path,predict_model) :
-    class_num = ["creature","text","Beelzebub","title"]
+    class_num = ["black","text","title"]
     vidCap = cv2.VideoCapture(video_path)
     return_dict = {
         "frame_num" : 0 ,
-        "creature" : 0,
+        "black" : 0,
         "text" : 0,
-        "Beelzebub" : 0,
         "title" : 0,
         "gray_mean" : [],
         "gray_std" : [],
@@ -34,10 +33,8 @@ def video_predict(video_path,predict_model) :
         predict_result = predict_model(image)
         data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
         for i in data_frame :
-            if i[-1] == 2  :
-                if i[-2] >= 0.8 : return_dict["Beelzebub"] += 1
-            elif i[-1] == 0 :
-                if i[-2] >= 0.8 : return_dict["creature"] += 1
+            if i[-1] == 0 :
+                if i[-2] >= 0.9 : return_dict["black"] += 1
             else : return_dict[class_num[int(i[-1])]] += 1
         return_dict["frame_num"] += 1
     vidCap.release()
@@ -77,12 +74,12 @@ def main() :
 
     #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     device = torch.device("cuda:0")
-    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp7\weights\best.pt")
-    predict_model.iou = 0.3
+    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp9\weights\best.pt")
+    predict_model.iou = 0.2
     predict_model.conf = 0.2
     predict_model.to(device)
 
-    base_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
+    base_path = r"F:\work\video_analyze\output\cut_video\Detective Conan The Culprit Hanzawa"
     for video_name in os.listdir(base_path) :
         threads.append(MyThread(video_dict,base_path,video_name,predict_model,semaphore))
     ####################################################################################################################################
@@ -92,7 +89,7 @@ def main() :
     for _idx_ in range(len(threads)):
         threads[_idx_].join()
 
-    with open('video_dict.yaml', 'w') as f:
+    with open('Hanzawa_video_dict.yaml', 'w') as f:
         yaml.dump(video_dict, f)
 
 

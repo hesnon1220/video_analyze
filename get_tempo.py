@@ -26,16 +26,11 @@ def main() :
     fps = 23.976
     
     #audio_path = os.path.join(r"F:\work\video_analyze\separated\htdemucs\test",i)
-    audio_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\01.ピンクレモネード.mp3"
+    audio_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\01.捕まえて、今夜。.flac"
     y,sr = librosa.load(audio_path)
     fft_data = get_fft(audio_path,fps)
     print(np.array(fft_data).shape)
 
-    """
-    vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
-    vocal_point = get_point(vocal_path)
-    vocal_cut = np.array(np.array(vocal_point)*fps,dtype="uint64")
-    """
     #print(y.shape)
     #print(sr)
     with open(r"F:\work\video_analyze\output\lnc_time.txt","r") as txt_file :
@@ -91,13 +86,13 @@ def main() :
 
     
     fourcc = cv2.VideoWriter_fourcc(*'XVID')    #輸出影像設定
-    out = cv2.VideoWriter( os.path.join('test.avi'), fourcc, fps, (1280,720))   #輸出無聲長條影像
+    out = cv2.VideoWriter( os.path.join(r"F:\work\video_analyze\test.avi"), fourcc, fps, (1920,1080))   #輸出無聲長條影像
 
     output_frame = 0
-    cut_video_path = r"F:\work\video_analyze\output\cut_video\Beelzebub-jou no Okinimesu mama"
+    cut_video_path = r"F:\work\video_analyze\output\cut_video\Detective Conan The Culprit Hanzawa"
     vocal_idx = 0
 
-    space_img = np.zeros(( 720,1280, 3), np.uint8)
+    space_img = np.zeros(( 1080,1920, 3), np.uint8)
 
     
     totla_frame = int(len(y)/sr*fps)
@@ -128,6 +123,7 @@ def main() :
                             if not ret or output_frame >= totla_frame: break
                             ret,image = vidCap.retrieve()
                             #cv2.putText(image, "{}-{}-{}".format(vocal_idx,output_frame,write_idx) , (10, 230), cv2.FONT_HERSHEY_SIMPLEX,2, (0, 0, 0), 1, cv2.LINE_AA)
+                            #cv2.putText(image, "{}".format(video_name) , (10, 100), cv2.FONT_HERSHEY_SIMPLEX,1, (0, 0, 0), 1, cv2.LINE_AA)
                             img_idx += 1
                             #last_image = image.copy()
                         out.write(image)
@@ -146,9 +142,9 @@ def main() :
 
     #audioclip = AudioFileClip(r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav") #獲取音頻
     audioclip = AudioFileClip(audio_path)
-    clip = VideoFileClip( os.path.join(r"test.avi"))    #獲取影片
+    clip = VideoFileClip( os.path.join(r"F:\work\video_analyze\test.avi"))    #獲取影片
     new_video = clip.set_audio(audioclip)   #影片合併音頻
-    new_video.write_videofile( os.path.join(r"test.mp4")) 
+    new_video.write_videofile( os.path.join(r"F:\work\video_analyze\test_1.mp4")) 
     
 
     """
@@ -280,6 +276,22 @@ def fill_fields(fields, objects_dict):
     for idx,ele in enumerate(fields) :
         if (ele != 0) and (str(idx) in rec_dict.keys()):
             len_list = rec_dict[str(idx)]
+            sum_len = sum([i[0] for i in len_list])
+            magnification_len = (sum_len + ele)/sum_len
+            if magnification_len <= 1.2 :
+                for rec_val in range(len(rec_dict[str(idx)])) :
+                    error_len = int(ele*rec_dict[str(idx)][rec_val][0]/sum_len+0.5)
+                    rec_dict[str(idx)][rec_val][1] = rec_dict[str(idx)][rec_val][0] + error_len
+                    fields[idx] -= error_len
+                    if fields[idx] < 0 :
+                        rec_dict[str(idx)][rec_val][1] += fields[idx]
+                        fields[idx] = 0
+                """
+                for rec_val in rec_dict[str(idx)] :
+                    rec_val[1] = (sum_len + ele)/sum_len
+                rec_dict[str(idx)][max_idx][1] = max_len + ele
+                fields[idx] = 0
+                """
             max_idx = max_index([i[0] for i in len_list])[0]
             max_len = len_list[max_idx][0]
             if (max_len + ele) / max_len <= 1.2 :
@@ -288,6 +300,7 @@ def fill_fields(fields, objects_dict):
     print(fields)
     print(rec_dict)
     #######################################################################################
+    
     if max(fields) != 0 and  objects_dict != {} :
         objects = list(objects_dict.keys())
         for idx,ele in enumerate(fields) :
@@ -299,6 +312,8 @@ def fill_fields(fields, objects_dict):
                 fields[idx] -= ele
                 objects_dict[min_obj] -= 1
                 if objects_dict[min_obj] == 0 : del objects_dict[min_obj]
+    
+    if max(fields) != 0 : raise Exception( "Cut too little {}".format(fields) )
     return rec_dict
 
 
@@ -387,18 +402,21 @@ def calVolumeDB(waveData, frameSize, overLap):
 
 def get_cut_video_dict():
 
-
-    with open(r"F:\work\video_analyze\video_dict.yaml","r") as yaml_file :
+    cut_video_path = r"F:\work\video_analyze\output\cut_video\Detective Conan The Culprit Hanzawa"
+    with open(r"F:\work\video_analyze\Hanzawa_video_dict.yaml","r") as yaml_file :
         video_dict = yaml.load(yaml_file,Loader=yaml.Loader)
 
     pick_video = []
     for key,value in video_dict.items() :
+        if not os.path.exists(os.path.join(cut_video_path,"{}.mp4".format(key))) : 
+            print(os.path.join(cut_video_path,key))
+            continue
         tmp_dict = video_dict[key]
         #pick_score = max((tmp_dict["charater"]/tmp_dict["frame_num"] >= 1 ),(tmp_dict["creature"] > 0))*( tmp_dict["text"] == 0 )
         gray_mean = tmp_dict["gray_mean"]
         gray_std = tmp_dict["gray_std"]
-        pick_score = (tmp_dict["Beelzebub"]/tmp_dict["frame_num"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min(gray_mean) >= 150 )*( min( gray_std ) >= 15 )
-
+        #pick_score = (tmp_dict["Beelzebub"]/tmp_dict["frame_num"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min(gray_mean) >= 150 )*( min( gray_std ) >= 15 )
+        pick_score = (tmp_dict["black"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min(gray_mean) >= 100 )*( min( gray_std ) >= 15 )
         if pick_score : pick_video.append([key,tmp_dict["frame_num"]])
 
     return_dict = {}

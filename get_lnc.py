@@ -4,7 +4,7 @@ import re
 def main():
 
     data = []
-    with open(r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\NNNN.lrc","r",encoding="utf8") as lnc_file :
+    with open(r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\no_b.lrc","r",encoding="utf8") as lnc_file :
         lines = lnc_file.readlines()
         for i in lines :
             data.append(i.replace("\n","")[:-10])
@@ -12,8 +12,8 @@ def main():
 
     all_timestep = []
     for i in data :
+        if len(i) == 0 : continue
         #string = "This is a string with [12:34:56] and [00:00:01] elements."
-
         pattern = r"\[(\d{2}):(\d{2}):(\d{2})\]"
 
         matches = re.findall(pattern, i)
@@ -26,9 +26,6 @@ def main():
         all_timestep.append(tmp[0]*60+tmp[1]+tmp[2]/100)
     with open(os.path.join(r"F:\work\video_analyze\output","lnc_time.txt"),"w") as txt_file:
         print("\t".join(list(map(str,all_timestep))),file = txt_file)
-
-
-    all_timestep
 
 
 if __name__ == "__main__" :
