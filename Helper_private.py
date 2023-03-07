@@ -435,8 +435,8 @@ def make_threshold_img_mask(image):
         chull = morphology.convex_hull_image(cleared)
         return np.array(chull*255,dtype="uint8")
 ####################################################################################################################################
-def get_hist(img) :
-    hist = cv2.calcHist([img], [0], None, [256], [0, 256])
+def get_hist(img,channel=0) :
+    hist = cv2.calcHist([img], [channel], None, [256], [0, 256])
     hist = cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX, -1)
     return hist
 ####################################################################################################################################
