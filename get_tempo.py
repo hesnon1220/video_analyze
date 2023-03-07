@@ -17,10 +17,6 @@ import random
 import yaml
 
 
-def chage_speed() :
-    pass
-
-
 def main() :
     
     fps = 23.976
