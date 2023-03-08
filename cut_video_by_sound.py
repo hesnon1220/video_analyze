@@ -218,7 +218,7 @@ def video_predict(video_path,predict_model,cut_point_dict) :
             data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
             for i in data_frame :
                 if i[-1] == 0 :
-                    if i[-2] >= 0.9 : return_dict["black"] += 1
+                    if i[-2] >= 0.8 : return_dict["black"] += 1
                 else : return_dict[class_num[int(i[-1])]] += 1
             ##########################################################################################
             end_time = time.time()
@@ -274,7 +274,7 @@ if __name__ == "__main__" :
     device = torch.device("cuda:0")
     predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp9\weights\best.pt")
     predict_model.iou = 0.2
-    predict_model.conf = 0.2
+    predict_model.conf = 0.3
     predict_model.to(device)
     ####################################################################################################################################
     max_deals = 10

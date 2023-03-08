@@ -529,7 +529,10 @@ def get_fft(file_path,fps):
 ####################################################################################################################################
 def single_distance(input_data):
     return shorten_number( np.power(np.sum([ i*i for i in input_data ]),1/2) )
-
+####################################################################################################################################
+def min_index(lst):
+    min_val = min(lst)
+    return [i for i, x in enumerate(lst) if x == min_val]
 
 if __name__ =="__main__" :
     print("This is Helper_private.")
