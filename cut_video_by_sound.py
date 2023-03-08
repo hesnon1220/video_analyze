@@ -251,12 +251,11 @@ if __name__ == "__main__" :
 
 
     cut_video_data = {}
-    for i in os.listdir( video_folder_path ) :
+    for i in tqdm(os.listdir( video_folder_path )[:1]) :
         video_name = i.replace(".mp4","")
         video_path = os.path.join( video_folder_path , i )
         cut_point_dict = get_cut_video(var_hist_path,video_name)
         cut_point_dict = video_predict( video_path , predict_model , cut_point_dict  )
         cut_video_data[video_name] = cut_point_dict
-    
-    with open(os.path.join(save_path,'cut_video_data.yaml'), 'w') as f:
-        yaml.dump(cut_video_data, f)
+        with open(os.path.join(save_path,'%s.yaml'%(video_name)), 'w') as f:
+            yaml.dump(cut_video_data, f)
