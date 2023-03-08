@@ -8,7 +8,7 @@ import torch
 import time
 import yaml
 import threading
-
+from tqdm import tqdm
 
 def min_index(lst):
     min_val = min(lst)
@@ -84,7 +84,7 @@ def get_cut_video(var_hist_path,video_name) :
     cut_point_idx = 0
     rec_state = False
     tmp_hist = []
-    for i in range(start_point,end_point) :
+    for i in tqdm(range(start_point,end_point)) :
         if rec_state : tmp_hist.append(var_hist[i])
         if not rec_state and not ( var_hist[i] < 0.8 ) :
             rec_state = True
@@ -178,6 +178,7 @@ def get_point(audio_file,fps):
 def video_predict(video_path,predict_model,cut_point_dict) :
     class_num = ["black","text","title"]
     vidCap = cv2.VideoCapture(video_path)
+    video_length = int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT))
     return_dict_ori = {
         "black" : 0,
         "text" : 0,
@@ -189,6 +190,8 @@ def video_predict(video_path,predict_model,cut_point_dict) :
     current_frame = 0
     cpd_key = 0
     while True :
+        start_time = time.time()
+        if cpd_key not in cut_point_dict.keys() : break
         if current_frame >= cut_point_dict[cpd_key]["interval"][1] :
             for key,val in return_dict.items() :
                 cut_point_dict[cpd_key][key] = val
@@ -196,7 +199,7 @@ def video_predict(video_path,predict_model,cut_point_dict) :
             cpd_key += 1
             continue
         ret = vidCap.grab()
-        if not ret or cpd_key not in cut_point_dict.keys(): break
+        if not ret: break
         if current_frame >= cut_point_dict[cpd_key]["interval"][0] :
             ret,image = vidCap.retrieve()
             gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -208,8 +211,10 @@ def video_predict(video_path,predict_model,cut_point_dict) :
                 if i[-1] == 0 :
                     if i[-2] >= 0.9 : return_dict["black"] += 1
                 else : return_dict[class_num[int(i[-1])]] += 1
-
+            end_time = time.time()
+            print("{}/{} --- {:.2f} it/s.".format(current_frame,video_length,1/(end_time-start_time)),end = "\r")
         current_frame += 1
+        
     vidCap.release()
     cv2.destroyAllWindows()
 
@@ -218,7 +223,7 @@ def video_predict(video_path,predict_model,cut_point_dict) :
 if __name__ == "__main__" :
     video_name = ""
     var_hist_path = r"F:\work\video_analyze\output\var_hist\Detective Conan The Culprit Hanzawa"
-    video_folder_path = r""
+    video_folder_path = r"F:\work\video_analyze\data\video\Detective Conan The Culprit Hanzawa"
     save_path = r""
     audio_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\01.捕まえて、今夜。.flac"
     vocal_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\separated\htdemucs\01.捕まえて、今夜。\vocals.wav"
@@ -236,7 +241,7 @@ if __name__ == "__main__" :
     cut_video_data = {}
     for i in os.listdir( video_folder_path )[:1] :
         video_name = i.replace(".mp4","")
-        cut_point_dict = get_cut_video(var_hist_path,video_name)
         video_path = os.path.join( video_folder_path , i )
+        cut_point_dict = get_cut_video(var_hist_path,video_name)
         cut_point_dict = video_predict( video_path , predict_model , cut_point_dict  )
         print(cut_point_dict)
