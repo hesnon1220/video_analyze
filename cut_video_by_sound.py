@@ -268,7 +268,7 @@ if __name__ == "__main__" :
     fps = 23.976
     ####################################################################################################################################
     paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
-    with open(os.path.join(save_path,'%paragraph_dict.yaml'), 'w') as f:
+    with open(os.path.join(save_path,'paragraph_dict.yaml'), 'w') as f:
         yaml.dump(paragraph_dict, f)
     ####################################################################################################################################
     device = torch.device("cuda:0")
