@@ -1,6 +1,6 @@
 import librosa
 import numpy as np
-from Helper_private import get_fft,shorten_number,dataframe_change,get_hist
+from Helper_private import get_fft,shorten_number,dataframe_change,get_hist,get_list_barycenter
 import cv2
 import os
 import matplotlib.pyplot as plt
@@ -213,7 +213,7 @@ def video_predict(video_path,predict_model,cut_point_dict) :
             return_dict["gray_std"].append(shorten_number(np.std(gray_image)))
             ##########################################################################################
             for channal_num in range(3) :
-                return_dict["BGR"][channal_num].append(get_hist(image,channal_num))
+                return_dict["BGR"][channal_num].append(get_list_barycenter(get_hist(image,channal_num)))
             ##########################################################################################
             predict_result = predict_model(image)
             data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
