@@ -1,9 +1,14 @@
 import librosa
 import numpy as np
-from Helper_private import get_fft
+from Helper_private import get_fft,shorten_number,dataframe_change
 import cv2
 import os
 import matplotlib.pyplot as plt
+import torch
+import time
+import yaml
+import threading
+
 
 def min_index(lst):
     min_val = min(lst)
@@ -11,45 +16,25 @@ def min_index(lst):
 
 
 
-def main(video_name,var_hist_path,video_folder_path,save_path):
-    fps = 23.976
-    
-    #audio_path = os.path.join(r"F:\work\video_analyze\separated\htdemucs\test",i)
-    audio_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\01.捕まえて、今夜。.flac"
+def get_paragraph(audio_path,vocal_path,fps,lnc_time_path):
     y,sr = librosa.load(audio_path)
     fft_data = get_fft(audio_path,fps)
-    print(np.array(fft_data).shape)
-    
     totla_frame = int(len(y)/sr*fps)
-
     ##########################################################################################################################
-    vocal_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\separated\htdemucs\01.捕まえて、今夜。\vocals.wav"
     vocal_frams = get_point(vocal_path,fps)
-
-
-    print(vocal_frams)
     ##########################################################################################################################
-    
-    #print(y.shape)
-    #print(sr)
-    with open(r"F:\work\video_analyze\output\lnc_time.txt","r") as txt_file :
+    with open(lnc_time_path,"r") as txt_file :
         line = txt_file.readline()
         lnc_time = np.array(list(map(float,line.replace("\r","").split("\t"))))
     vocal_cut = np.array((lnc_time-0.3)*fps)
-    print(vocal_cut)
-
-
+    ##########################################################################################################################
     tmp_vocal_frams = np.array([ i[0] for i in vocal_frams])
     for idx,ele in enumerate(vocal_cut) :
         dist = np.abs(tmp_vocal_frams-ele)
         if min(dist) < 3*fps :
             vocal_cut[idx] = tmp_vocal_frams[min_index(dist)[0]]
-
     vocal_cut = np.array(vocal_cut,dtype="uint64")
-    print(vocal_frams)
-    print(vocal_cut)
-
-    
+    ##########################################################################################################################
     interlude = []
     start_inter = 0
     for i in vocal_frams :
@@ -59,25 +44,21 @@ def main(video_name,var_hist_path,video_folder_path,save_path):
         start_inter = i[1]
     if start_inter != totla_frame :
         interlude.append( [start_inter,totla_frame] )
-    print(interlude)
-    
-
+    ##########################################################################################################################
     paragraph_dict = {
         "interlude" : [],
         "vocal" : {}
     }
-
     for i in interlude :
         paragraph_dict["interlude"].append( i[1]-i[0] )
     vocal_frame_idx = 0
-
     for vocal_frame_idx in range(len(vocal_frams)) :
         tmp = [vocal_frams[vocal_frame_idx][0]] + [ i for i in vocal_cut if (i > vocal_frams[vocal_frame_idx][0] and i < vocal_frams[vocal_frame_idx][1]) ] + [vocal_frams[vocal_frame_idx][1]]
         paragraph_dict["vocal"][vocal_frame_idx] = []
         for i in range(len(tmp)-1) :
             paragraph_dict["vocal"][vocal_frame_idx] .append( tmp[i+1] - tmp[i] )
-
-    print(paragraph_dict)
+    ##########################################################################################################################
+    return paragraph_dict
 
 
 
@@ -157,7 +138,7 @@ def get_point(audio_file,fps):
         start_idx += 1
 
     if_rec = False
-    vocal_frams = []
+    vocal_frames = []
     for idx,ele in enumerate(energy_gap_con) :
         if ele == 1 and not if_rec :
             if_rec = True
@@ -165,7 +146,7 @@ def get_point(audio_file,fps):
         elif ( ele == 0 or idx == len(energy_gap_con)-1 ) and if_rec :
             if_rec = False
             end_frame =  energy_frame[idx]
-            vocal_frams.append( [start_frame,end_frame] )
+            vocal_frames.append( [start_frame,end_frame] )
 
     """
     x_bar = np.arange( 0 , len( energy ) , 1 )
@@ -189,12 +170,73 @@ def get_point(audio_file,fps):
     onset_times = librosa.frames_to_time(onset_frames, sr=sr_audio, hop_length=hop_length)
 
 
-    return vocal_frams
+    return vocal_frames
+
+
+
+
+def video_predict(video_path,predict_model,cut_point_dict) :
+    class_num = ["black","text","title"]
+    vidCap = cv2.VideoCapture(video_path)
+    return_dict_ori = {
+        "black" : 0,
+        "text" : 0,
+        "title" : 0,
+        "gray_mean" : [],
+        "gray_std" : [],
+    }
+    return_dict = return_dict_ori.copy()
+    current_frame = 0
+    cpd_key = 0
+    while True :
+        if current_frame >= cut_point_dict[cpd_key]["interval"][1] :
+            for key,val in return_dict.items() :
+                cut_point_dict[cpd_key][key] = val
+            return_dict = return_dict_ori.copy()
+            cpd_key += 1
+            continue
+        ret = vidCap.grab()
+        if not ret or cpd_key not in cut_point_dict.keys(): break
+        if current_frame >= cut_point_dict[cpd_key]["interval"][0] :
+            ret,image = vidCap.retrieve()
+            gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            return_dict["gray_mean"].append( shorten_number(np.mean(gray_image)))
+            return_dict["gray_std"].append(shorten_number(np.std(gray_image)))
+            predict_result = predict_model(image)
+            data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
+            for i in data_frame :
+                if i[-1] == 0 :
+                    if i[-2] >= 0.9 : return_dict["black"] += 1
+                else : return_dict[class_num[int(i[-1])]] += 1
+
+        current_frame += 1
+    vidCap.release()
+    cv2.destroyAllWindows()
+
+    return cut_point_dict
 
 if __name__ == "__main__" :
     video_name = ""
     var_hist_path = r"F:\work\video_analyze\output\var_hist\Detective Conan The Culprit Hanzawa"
     video_folder_path = r""
     save_path = r""
-    #main(video_name,var_hist_path,video_folder_path,save_path)
-    cut_point_dict = get_cut_video(var_hist_path,r"[GST] Detective Conan The Culprit Hanazawa - S01E01 [1080p]")
+    audio_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\01.捕まえて、今夜。.flac"
+    vocal_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\separated\htdemucs\01.捕まえて、今夜。\vocals.wav"
+    lnc_time_path = r"F:\work\video_analyze\output\lnc_time.txt"
+    fps = 23.976
+    #paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
+
+    device = torch.device("cuda:0")
+    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp9\weights\best.pt")
+    predict_model.iou = 0.2
+    predict_model.conf = 0.2
+    predict_model.to(device)
+
+
+    cut_video_data = {}
+    for i in os.listdir( video_folder_path )[:1] :
+        video_name = i.replace(".mp4","")
+        cut_point_dict = get_cut_video(var_hist_path,video_name)
+        video_path = os.path.join( video_folder_path , i )
+        cut_point_dict = video_predict( video_path , predict_model , cut_point_dict  )
+        print(cut_point_dict)
