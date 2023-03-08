@@ -437,7 +437,7 @@ def make_threshold_img_mask(image):
 ####################################################################################################################################
 def get_hist(img,channel=0) :
     hist = cv2.calcHist([img], [channel], None, [256], [0, 256])
-    hist = [shorten_number(i) for i in cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX, -1)]
+    hist = cv2.normalize(hist, hist, 0, 1, cv2.NORM_MINMAX, -1)
     return hist
 ####################################################################################################################################
 def hist_similar(lh, rh):
@@ -454,7 +454,7 @@ def get_list_barycenter(data_list) :
     sum = 0
     for idx,ele in enumerate(data_list) :
         sum += idx*ele
-    return sum
+    return shorten_number(sum)
 ####################################################################################################################################
 # 差异值哈希算法
 def dhash(image):

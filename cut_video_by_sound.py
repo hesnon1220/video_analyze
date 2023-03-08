@@ -9,6 +9,8 @@ import time
 import yaml
 import threading
 from tqdm import tqdm
+import threading
+
 
 def min_index(lst):
     min_val = min(lst)
@@ -62,10 +64,9 @@ def get_paragraph(audio_path,vocal_path,fps,lnc_time_path):
 
 
 
-def get_cut_video(var_hist_path,video_name) :
+def get_cut_video(var_hist_path,video_name,fps) :
     
     ##########################################################################################################################
-    fps = 23.976
     start_point = int(fps*(1*60+40))
     end_point = int(fps*(9*60+10))
 
@@ -173,8 +174,6 @@ def get_point(audio_file,fps):
     return vocal_frames
 
 
-
-
 def video_predict(video_path,predict_model,cut_point_dict) :
     class_num = ["black","text","title"]
     vidCap = cv2.VideoCapture(video_path)
@@ -231,31 +230,61 @@ def video_predict(video_path,predict_model,cut_point_dict) :
 
     return cut_point_dict
 
+
+def task(base_path,file_name,var_hist_path,predict_model,save_path,fps) :
+    cut_video_data = {}
+    video_name = file_name.replace(".mp4","")
+    video_path = os.path.join( base_path , file_name )
+    cut_point_dict = get_cut_video(var_hist_path,video_name,fps)
+    cut_point_dict = video_predict( video_path , predict_model , cut_point_dict  )
+    cut_video_data[video_name] = cut_point_dict
+    with open(os.path.join(save_path,'%s.yaml'%(video_name)), 'w') as f:
+        yaml.dump(cut_video_data, f)
+
+class MyThread(threading.Thread):
+    def __init__(self, base_path,file_name,var_hist_path,predict_model,save_path,fps,semaphore):
+        threading.Thread.__init__(self)
+        self.base_path = base_path
+        self.file_name = file_name
+        self.var_hist_path = var_hist_path
+        self.predict_model =predict_model
+        self.save_path = save_path
+        self.fps = fps
+        self.semaphore = semaphore
+    ####################################################################################################################################
+    def run(self):
+        with self.semaphore :
+            task(self.base_path,self.file_name,self.var_hist_path,self.predict_model,self.save_path,self.fps)
+####################################################################################################################################
 if __name__ == "__main__" :
     video_name = ""
     title = "Detective Conan The Culprit Hanzawa"
     var_hist_path = "F:\\work\\video_analyze\\output\\var_hist\\%s"%(title)
-    video_folder_path = "F:\\work\\video_analyze\\data\\video\\%s"%(title)
+    base_path = "F:\\work\\video_analyze\\data\\video\\%s"%(title)
     save_path = "F:\\work\\video_analyze\\output\\cut_video_data\\%s"%(title)
     audio_path = "F:\\work\\video_analyze\\data\\audio\\Detective Conan The Culprit Hanzawa\\01.捕まえて、今夜。.flac"
     vocal_path = "F:\\work\\video_analyze\\data\\audio\\Detective Conan The Culprit Hanzawa\\separated\htdemucs\\01.捕まえて、今夜。\\vocals.wav"
     lnc_time_path = "F:\\work\\video_analyze\\output\\lnc_time.txt"
     fps = 23.976
-    #paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
-
+    ####################################################################################################################################
+    paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
+    with open(os.path.join(save_path,'%paragraph_dict.yaml'), 'w') as f:
+        yaml.dump(paragraph_dict, f)
+    ####################################################################################################################################
     device = torch.device("cuda:0")
     predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp9\weights\best.pt")
     predict_model.iou = 0.2
     predict_model.conf = 0.2
     predict_model.to(device)
-
-
-    cut_video_data = {}
-    for i in tqdm(os.listdir( video_folder_path )[:1]) :
-        video_name = i.replace(".mp4","")
-        video_path = os.path.join( video_folder_path , i )
-        cut_point_dict = get_cut_video(var_hist_path,video_name)
-        cut_point_dict = video_predict( video_path , predict_model , cut_point_dict  )
-        cut_video_data[video_name] = cut_point_dict
-        with open(os.path.join(save_path,'%s.yaml'%(video_name)), 'w') as f:
-            yaml.dump(cut_video_data, f)
+    ####################################################################################################################################
+    max_deals = 10
+    semaphore = threading.BoundedSemaphore(max_deals)
+    threads = []
+    for file_name in os.listdir(base_path) :
+        threads.append(MyThread(base_path,file_name,var_hist_path,predict_model,save_path,fps,semaphore))
+    ####################################################################################################################################
+    for _idx_ in range(len(threads)) :
+        threads[_idx_].start()
+    ####################################################################################################################################
+    for _idx_ in range(len(threads)):
+        threads[_idx_].join()
