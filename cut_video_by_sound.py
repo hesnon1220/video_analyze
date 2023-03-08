@@ -1,6 +1,6 @@
 import librosa
 import numpy as np
-from Helper_private import get_fft,shorten_number,dataframe_change
+from Helper_private import get_fft,shorten_number,dataframe_change,get_hist
 import cv2
 import os
 import matplotlib.pyplot as plt
@@ -185,6 +185,11 @@ def video_predict(video_path,predict_model,cut_point_dict) :
         "title" : 0,
         "gray_mean" : [],
         "gray_std" : [],
+        "BGR" : {
+            0:[],
+            1:[],
+            2:[]
+        }
     }
     return_dict = return_dict_ori.copy()
     current_frame = 0
@@ -203,14 +208,20 @@ def video_predict(video_path,predict_model,cut_point_dict) :
         if current_frame >= cut_point_dict[cpd_key]["interval"][0] :
             ret,image = vidCap.retrieve()
             gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            ##########################################################################################
             return_dict["gray_mean"].append( shorten_number(np.mean(gray_image)))
             return_dict["gray_std"].append(shorten_number(np.std(gray_image)))
+            ##########################################################################################
+            for channal_num in range(3) :
+                return_dict["BGR"][channal_num].append(get_hist(image,channal_num))
+            ##########################################################################################
             predict_result = predict_model(image)
             data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
             for i in data_frame :
                 if i[-1] == 0 :
                     if i[-2] >= 0.9 : return_dict["black"] += 1
                 else : return_dict[class_num[int(i[-1])]] += 1
+            ##########################################################################################
             end_time = time.time()
             print("{}/{} --- {:.2f} it/s.".format(current_frame,video_length,1/(end_time-start_time)),end = "\r")
         current_frame += 1
@@ -222,12 +233,13 @@ def video_predict(video_path,predict_model,cut_point_dict) :
 
 if __name__ == "__main__" :
     video_name = ""
-    var_hist_path = r"F:\work\video_analyze\output\var_hist\Detective Conan The Culprit Hanzawa"
-    video_folder_path = r"F:\work\video_analyze\data\video\Detective Conan The Culprit Hanzawa"
-    save_path = r""
-    audio_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\01.捕まえて、今夜。.flac"
-    vocal_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\separated\htdemucs\01.捕まえて、今夜。\vocals.wav"
-    lnc_time_path = r"F:\work\video_analyze\output\lnc_time.txt"
+    title = "Detective Conan The Culprit Hanzawa"
+    var_hist_path = "F:\\work\\video_analyze\\output\\var_hist\\%s"%(title)
+    video_folder_path = "F:\\work\\video_analyze\\data\\video\\%s"%(title)
+    save_path = "F:\\work\\video_analyze\\output\\cut_video_data\\%s"%(title)
+    audio_path = "F:\\work\\video_analyze\\data\\audio\\Detective Conan The Culprit Hanzawa\\01.捕まえて、今夜。.flac"
+    vocal_path = "F:\\work\\video_analyze\\data\\audio\\Detective Conan The Culprit Hanzawa\\separated\htdemucs\\01.捕まえて、今夜。\\vocals.wav"
+    lnc_time_path = "F:\\work\\video_analyze\\output\\lnc_time.txt"
     fps = 23.976
     #paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
 
@@ -239,9 +251,12 @@ if __name__ == "__main__" :
 
 
     cut_video_data = {}
-    for i in os.listdir( video_folder_path )[:1] :
+    for i in os.listdir( video_folder_path ) :
         video_name = i.replace(".mp4","")
         video_path = os.path.join( video_folder_path , i )
         cut_point_dict = get_cut_video(var_hist_path,video_name)
         cut_point_dict = video_predict( video_path , predict_model , cut_point_dict  )
-        print(cut_point_dict)
+        cut_video_data[video_name] = cut_point_dict
+    
+    with open(os.path.join(save_path,'cut_video_data.yaml'), 'w') as f:
+        yaml.dump(cut_video_data, f)
