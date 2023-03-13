@@ -10,7 +10,7 @@ import yaml
 import threading
 from tqdm import tqdm
 import threading
-
+import copy
 
 def min_index(lst):
     min_val = min(lst)
@@ -19,11 +19,18 @@ def min_index(lst):
 
 
 def get_paragraph(audio_path,vocal_path,fps,lnc_time_path):
+    paragraph_dict = {
+        "paragraph":[],
+        "interlude" : [],
+        "vocal" : {}
+    }
+    ##########################################################################################################################
     y,sr = librosa.load(audio_path)
     fft_data = get_fft(audio_path,fps)
     totla_frame = int(len(y)/sr*fps)
     ##########################################################################################################################
     vocal_frams = get_point(vocal_path,fps)
+    print(vocal_frams)
     ##########################################################################################################################
     with open(lnc_time_path,"r") as txt_file :
         line = txt_file.readline()
@@ -36,6 +43,7 @@ def get_paragraph(audio_path,vocal_path,fps,lnc_time_path):
         if min(dist) < 3*fps :
             vocal_cut[idx] = tmp_vocal_frams[min_index(dist)[0]]
     vocal_cut = np.array(vocal_cut,dtype="uint64")
+    print( vocal_cut )
     ##########################################################################################################################
     interlude = []
     start_inter = 0
@@ -46,11 +54,15 @@ def get_paragraph(audio_path,vocal_path,fps,lnc_time_path):
         start_inter = i[1]
     if start_inter != totla_frame :
         interlude.append( [start_inter,totla_frame] )
+    print(interlude)
     ##########################################################################################################################
-    paragraph_dict = {
-        "interlude" : [],
-        "vocal" : {}
-    }
+    if interlude[0][0] < vocal_frams[0][0] :inter_vocal = ["interlude","vocal"]
+    else : inter_vocal = ["vocal","interlude"]
+    iv_count = [0,0]
+    for i in range( len( vocal_frams ) + len(interlude ) ) :
+        paragraph_dict["paragraph"].append( (inter_vocal[i%2],iv_count[i%2]) )
+        iv_count[i%2] += 1
+    ##########################################################################################################################
     for i in interlude :
         paragraph_dict["interlude"].append( i[1]-i[0] )
     vocal_frame_idx = 0
@@ -67,8 +79,8 @@ def get_paragraph(audio_path,vocal_path,fps,lnc_time_path):
 def get_cut_video(var_hist_path,video_name,fps) :
     
     ##########################################################################################################################
-    start_point = int(fps*(1*60+40))
-    end_point = int(fps*(9*60+10))
+    #start_point = int(fps*(1*60+40))
+    #end_point = int(fps*(9*60+10))
 
     min_sec_set = 1
     min_interval_set = fps*min_sec_set
@@ -79,7 +91,8 @@ def get_cut_video(var_hist_path,video_name,fps) :
         lines = txtfile.readlines()
         for i in lines :
             var_hist.append(eval(i))
-
+    start_point = int(fps*(10*60))
+    end_point = int(fps*(20*60))
                     
     cut_point_dict = {}
     cut_point_idx = 0
@@ -149,7 +162,8 @@ def get_point(audio_file,fps):
             end_frame =  energy_frame[idx]
             vocal_frames.append( [start_frame,end_frame] )
 
-    """
+
+    
     x_bar = np.arange( 0 , len( energy ) , 1 )
     fig = plt.figure(figsize=(70,8))
     plt.subplot(111)
@@ -160,7 +174,7 @@ def get_point(audio_file,fps):
     #plt.scatter(tmp_data/fps, np.array(cut_result)[tmp_data])
     plt.savefig(os.path.join(r"F:\work\video_analyze\output","{}.png".format("cut_reslut_2")),bbox_inches='tight',pad_inches = 0)
     plt.close('all')
-    """
+    
 
     # 尋找開始發聲的位置
     onset_frames = librosa.onset.onset_detect(y=y_audio, sr=sr_audio, hop_length=hop_length, backtrack=True, energy=ZCR, 
@@ -175,13 +189,12 @@ def get_point(audio_file,fps):
 
 
 def video_predict(video_path,predict_model,cut_point_dict) :
-    class_num = ["black","text","title"]
+    class_num = ["creature","text","Beelzebub","title"]
+    #class_num = ["black","text","title"]
     vidCap = cv2.VideoCapture(video_path)
     video_length = int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT))
+
     return_dict_ori = {
-        "black" : 0,
-        "text" : 0,
-        "title" : 0,
         "gray_mean" : [],
         "gray_std" : [],
         "BGR" : {
@@ -190,7 +203,9 @@ def video_predict(video_path,predict_model,cut_point_dict) :
             2:[]
         }
     }
-    return_dict = return_dict_ori.copy()
+    for i in class_num :
+        return_dict_ori[i] = 0
+    return_dict = copy.deepcopy(return_dict_ori)
     current_frame = 0
     cpd_key = 0
     while True :
@@ -199,7 +214,7 @@ def video_predict(video_path,predict_model,cut_point_dict) :
         if current_frame >= cut_point_dict[cpd_key]["interval"][1] :
             for key,val in return_dict.items() :
                 cut_point_dict[cpd_key][key] = val
-            return_dict = return_dict_ori.copy()
+            return_dict = copy.deepcopy(return_dict_ori)
             cpd_key += 1
             continue
         ret = vidCap.grab()
@@ -218,8 +233,16 @@ def video_predict(video_path,predict_model,cut_point_dict) :
             data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
             for i in data_frame :
                 if i[-1] == 0 :
+                    if i[-2] >= 0.6 : return_dict["creature"] += 1
+                elif i[-1] == 2 :
+                    if i[-2] >= 0.95 : return_dict["Beelzebub"] += 1
+                else : return_dict[class_num[int(i[-1])]] += 1
+            """
+            for i in data_frame :
+                if i[-1] == 0 :
                     if i[-2] >= 0.8 : return_dict["black"] += 1
                 else : return_dict[class_num[int(i[-1])]] += 1
+            """
             ##########################################################################################
             end_time = time.time()
             print("{}/{} --- {:.2f} it/s.".format(current_frame,video_length,1/(end_time-start_time)),end = "\r")
@@ -258,22 +281,26 @@ class MyThread(threading.Thread):
 ####################################################################################################################################
 if __name__ == "__main__" :
     video_name = ""
-    title = "Detective Conan The Culprit Hanzawa"
+    #title = "Detective Conan The Culprit Hanzawa"
+    title = "Beelzebub-jou no Okinimesu mama"
     var_hist_path = "F:\\work\\video_analyze\\output\\var_hist\\%s"%(title)
     base_path = "F:\\work\\video_analyze\\data\\video\\%s"%(title)
     save_path = "F:\\work\\video_analyze\\output\\cut_video_data\\%s"%(title)
-    audio_path = "F:\\work\\video_analyze\\data\\audio\\Detective Conan The Culprit Hanzawa\\01.捕まえて、今夜。.flac"
-    vocal_path = "F:\\work\\video_analyze\\data\\audio\\Detective Conan The Culprit Hanzawa\\separated\htdemucs\\01.捕まえて、今夜。\\vocals.wav"
-    lnc_time_path = "F:\\work\\video_analyze\\output\\lnc_time.txt"
+    audio_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\01.ピンクレモネード.wav"
+    vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
+    lnc_time_path = r"F:\work\video_analyze\output\Beelzebub_lnc_time.txt"
     fps = 23.976
     ####################################################################################################################################
     paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
+    print(paragraph_dict)
+    
     with open(os.path.join(save_path,'paragraph_dict.yaml'), 'w') as f:
         yaml.dump(paragraph_dict, f)
     ####################################################################################################################################
+    
     device = torch.device("cuda:0")
-    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp9\weights\best.pt")
-    predict_model.iou = 0.2
+    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp7\weights\best.pt")
+    predict_model.iou = 0.3
     predict_model.conf = 0.3
     predict_model.to(device)
     ####################################################################################################################################
@@ -288,3 +315,5 @@ if __name__ == "__main__" :
     ####################################################################################################################################
     for _idx_ in range(len(threads)):
         threads[_idx_].join()
+    
+    
