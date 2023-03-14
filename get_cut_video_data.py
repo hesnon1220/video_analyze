@@ -56,7 +56,8 @@ def main():
             space_case_ori[key].append("")
             tmp_list = [(key,idx)]
             for avd_idx,avd_ele in enumerate(all_video_data) :
-                if int(avd_ele[-1]*1.1) >= ele :
+                #if int(avd_ele[-1]*1.1) >= ele :
+                if int(avd_ele[-1]-10) >= ele :
                     pick_data_dict[key][idx].append( avd_idx )
                     tmp_list.append( avd_idx )
             pick_data.append( tmp_list )
@@ -111,7 +112,7 @@ def main():
         if if_break : continue
         try :   print( "{}/{}={}---{} it/s".format( len(case_list),(case_num+1),len(case_list)/(case_num+1),shorten_number(1/(end_time-start_time))),end="\r" )
         except : pass
-        if q != 0 or len(case_list) <= h_list[-1] or case_num >= 1e7 or len(case_list) >= 1e6 : break
+        if q != 0 or len(case_list) <= h_list[-1] or case_num >= 5e7 or len(case_list) >= 5e6 : break
         h_list.append(len(case_list))
         if len( rec_list ) == len(pick_data) and rec_list not in case_list: case_list.append(rec_list)   
 
@@ -192,7 +193,8 @@ def main():
             tmp_rec = []
             for idx_spd,ele_spd in enumerate(sorted_pick_data_byscorelen) :
                 tmp_rec.append( ele_spd )
-                if int(sum([ i[-1] for i in tmp_rec])*1.1) > ele : break
+                #if int(sum([ i[-1] for i in tmp_rec])*1.1) > ele : break
+                if int(sum([ i[-1]-10 for i in tmp_rec])) > ele : break
             interlude_dict[idx] += tmp_rec
             for t_ele in tmp_rec :
                 sorted_pick_data_byscorelen.remove(t_ele)
