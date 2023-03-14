@@ -43,6 +43,35 @@ def wirte_in( out,cut_data_name,interval,target_len ) :
     vidCap.release()
     return out
 
+def main2() :
+    #base_path = r"F:\work\video_analyze\output\cut_video_data\Detective Conan The Culprit Hanzawa"
+    base_path = r"F:\work\video_analyze\output\cut_video_data\Beelzebub-jou no Okinimesu mama"
+    with open( os.path.join(base_path,"picked_data.yaml"),"r" ) as yamlfile :
+        paragraph_dict = yaml.load(yamlfile,Loader=yaml.Loader)
+
+    total_process = []
+    for target_par in paragraph_dict["paragraph"] :
+        (iv_key,idx_key) = target_par
+        if iv_key == 'interlude' :
+            process_data = paragraph_dict["interlude_data"][idx_key]
+            target_len = paragraph_dict[iv_key][idx_key]
+            cut_len = sum([ i[-1] for i in process_data ])
+            if cut_len < target_len :
+                chage_rate = target_len / cut_len
+                for i in process_data :
+                    total_process.append(i + [ int(i[-1] * chage_rate +0.5) ])
+            elif cut_len >= target_len :
+                for i in process_data :
+                    total_process.append(i + [ min( i[-1] , target_len ) ])
+                    target_len = target_len - min( i[-1] , target_len )
+        elif iv_key == 'vocal' :
+            process_data = paragraph_dict["vocal_data"][idx_key]
+            target_len_list = paragraph_dict[iv_key][idx_key]
+            for idx,target_len in enumerate(target_len_list) :
+                cut_len = process_data[idx][-1]
+                total_process.append( process_data[idx] + [ target_len ])
+
+
 
 def main() :
     #base_path = r"F:\work\video_analyze\output\cut_video_data\Detective Conan The Culprit Hanzawa"
@@ -93,4 +122,4 @@ def main() :
 
 
 if __name__ == "__main__" :
-    main()
+    main2()
