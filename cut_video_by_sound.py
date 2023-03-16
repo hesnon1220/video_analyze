@@ -82,7 +82,7 @@ def get_cut_video(var_hist_path,video_name,fps) :
     #start_point = int(fps*(1*60+40))
     #end_point = int(fps*(9*60+10))
 
-    min_sec_set = 1
+    min_sec_set = 3
     min_interval_set = fps*min_sec_set
     #interval_set = fps*sec_set
 
@@ -91,8 +91,10 @@ def get_cut_video(var_hist_path,video_name,fps) :
         lines = txtfile.readlines()
         for i in lines :
             var_hist.append(eval(i))
-    start_point = int(fps*(10*60))
-    end_point = int(fps*(20*60))
+    #start_point = int(fps*(10*60))
+    #end_point = int(fps*(20*60))
+    start_point = int(fps*(1*60+50))
+    end_point = int(fps*(9*60))
                     
     cut_point_dict = {}
     cut_point_idx = 0
@@ -189,8 +191,8 @@ def get_point(audio_file,fps):
 
 
 def video_predict(video_path,predict_model,cut_point_dict) :
-    class_num = ["creature","text","Beelzebub","title"]
-    #class_num = ["black","text","title"]
+    #class_num = ["creature","text","Beelzebub","title"]
+    class_num = ["black","text","title"]
     vidCap = cv2.VideoCapture(video_path)
     video_length = int(vidCap.get(cv2.CAP_PROP_FRAME_COUNT))
 
@@ -231,6 +233,7 @@ def video_predict(video_path,predict_model,cut_point_dict) :
             ##########################################################################################
             predict_result = predict_model(image)
             data_frame = dataframe_change(predict_result.pandas().xyxy)[0]
+            """
             for i in data_frame :
                 if i[-1] == 0 :
                     if i[-2] >= 0.6 : return_dict["creature"] += 1
@@ -242,7 +245,6 @@ def video_predict(video_path,predict_model,cut_point_dict) :
                 if i[-1] == 0 :
                     if i[-2] >= 0.8 : return_dict["black"] += 1
                 else : return_dict[class_num[int(i[-1])]] += 1
-            """
             ##########################################################################################
             end_time = time.time()
             print("{}/{} --- {:.2f} it/s.".format(current_frame,video_length,1/(end_time-start_time)),end = "\r")
@@ -281,14 +283,14 @@ class MyThread(threading.Thread):
 ####################################################################################################################################
 if __name__ == "__main__" :
     video_name = ""
-    #title = "Detective Conan The Culprit Hanzawa"
-    title = "Beelzebub-jou no Okinimesu mama"
+    title = "Detective Conan The Culprit Hanzawa"
+    #title = "Beelzebub-jou no Okinimesu mama"
     var_hist_path = "F:\\work\\video_analyze\\output\\var_hist\\%s"%(title)
     base_path = "F:\\work\\video_analyze\\data\\video\\%s"%(title)
     save_path = "F:\\work\\video_analyze\\output\\cut_video_data\\%s"%(title)
-    audio_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\01.ピンクレモネード.wav"
-    vocal_path = r"F:\work\video_analyze\data\audio\Beelzebub-jou no Okinimesu Mama\separated\htdemucs\01.ピンクレモネード\vocals.wav"
-    lnc_time_path = r"F:\work\video_analyze\output\Beelzebub_lnc_time.txt"
+    audio_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\01.捕まえて、今夜。.flac"
+    vocal_path = r"F:\work\video_analyze\data\audio\Detective Conan The Culprit Hanzawa\separated\htdemucs\01.捕まえて、今夜。\vocals.wav"
+    lnc_time_path = r"F:\work\video_analyze\output\cut_video_data\Detective Conan The Culprit Hanzawa\Hanzawa_lnc_time.txt"
     fps = 23.976
     ####################################################################################################################################
     paragraph_dict = get_paragraph(audio_path,vocal_path,fps,lnc_time_path)
@@ -297,10 +299,10 @@ if __name__ == "__main__" :
     with open(os.path.join(save_path,'paragraph_dict.yaml'), 'w') as f:
         yaml.dump(paragraph_dict, f)
     ####################################################################################################################################
-    
+    """
     device = torch.device("cuda:0")
-    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp7\weights\best.pt")
-    predict_model.iou = 0.3
+    predict_model = torch.hub.load('ultralytics/yolov5', 'custom', path = r"F:\work\yolov5\runs\train\exp9\weights\best.pt")
+    predict_model.iou = 0.2
     predict_model.conf = 0.3
     predict_model.to(device)
     ####################################################################################################################################
@@ -315,5 +317,5 @@ if __name__ == "__main__" :
     ####################################################################################################################################
     for _idx_ in range(len(threads)):
         threads[_idx_].join()
-    
+    """
     

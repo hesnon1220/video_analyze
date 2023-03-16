@@ -10,21 +10,19 @@ import copy
 import time
 
 def main():
-    #title = "Detective Conan The Culprit Hanzawa"
-    title = "Beelzebub-jou no Okinimesu mama"
+    title = "Detective Conan The Culprit Hanzawa"
+    #title = "Beelzebub-jou no Okinimesu mama"
     save_path = "F:\\work\\video_analyze\\output\\cut_video_data\\%s"%(title)
 
 
     #base_path = r"F:\work\video_analyze\output\cut_video_data\Detective Conan The Culprit Hanzawa"
-    base_path = r"F:\work\video_analyze\output\cut_video_data\Beelzebub-jou no Okinimesu mama"
+    base_path = "F:\\work\\video_analyze\\output\\cut_video_data\\%s"%(title)
     with open( os.path.join(base_path,"paragraph_dict.yaml"),"r" ) as yamlfile :
         paragraph_dict = yaml.load(yamlfile,Loader=yaml.Loader)
 
-    video_data_list = [i.replace(".mp4",".yaml") for i in os.listdir(r"F:\work\video_analyze\data\video\Beelzebub-jou no Okinimesu mama") ]
-
     print(paragraph_dict)
-    print(video_data_list)
-    
+    video_data_list = [i.replace(".mp4",".yaml") for i in os.listdir("F:\\work\\video_analyze\\data\\video\\%s"%(title)) ]
+
     all_video_data_dict = {}
     all_video_data = []
     for video_data_name in video_data_list :
@@ -33,18 +31,18 @@ def main():
         with open( data_path,"r" ) as yamlfile :
             video_data_dict = yaml.load(yamlfile,Loader=yaml.Loader)
         all_video_data_dict[data_name] = video_data_dict[data_name]
-        print(video_data_dict[data_name].keys())
+        #print(video_data_dict[data_name].keys())
         for key in list(video_data_dict[data_name].keys()) :
             tmp_dict = video_data_dict[data_name][key]
             gray_mean = tmp_dict["gray_mean"]
             gray_std = tmp_dict["gray_std"]
-            pick_score = (tmp_dict["Beelzebub"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min( gray_std ) >= 20 )*( min(gray_mean) >= 150 )#
+            #pick_score = (tmp_dict["Beelzebub"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min( gray_std ) >= 20 )*( min(gray_mean) >= 170 )#
+            pick_score = (tmp_dict["black"] >= 0 )*( tmp_dict["text"] == 0 )*( tmp_dict["title"] == 0 )*( min( gray_std ) >= 5 )#*( min(gray_mean) >= 100 )#
             if pick_score : 
                 write_data = [data_name,key,tmp_dict["lenght"]]
                 all_video_data.append( write_data )
-
-
-    print(all_video_data[:10])
+    print(len(all_video_data))
+    print([i[-1] for i in all_video_data])
     pick_data = []
     pick_data_dict = {}
     space_case_ori = {}
@@ -57,11 +55,10 @@ def main():
             tmp_list = [(key,idx)]
             for avd_idx,avd_ele in enumerate(all_video_data) :
                 #if int(avd_ele[-1]*1.1) >= ele :
-                if int(avd_ele[-1]-10) >= ele :
+                if int(avd_ele[-1]*1.1-10) >= ele :
                     pick_data_dict[key][idx].append( avd_idx )
                     tmp_list.append( avd_idx )
             pick_data.append( tmp_list )
-
 
 
     ############################################################################################################
@@ -69,6 +66,7 @@ def main():
     space_lab = [-1]*len(pick_data_cp)
     xy_idx = [ i[0] for i in pick_data_cp ]
     while -1 in space_lab :
+        print(space_lab)
         cu_data_len = [ len(i)-1 for i in pick_data_cp ]
         target_idx = min_index(cu_data_len)[0]
         pop_data = pick_data_cp.pop(target_idx)
@@ -107,12 +105,12 @@ def main():
                 if rec_num in pick_data_tmp[i_tmp] : pick_data_tmp[i_tmp].remove( rec_num )
             q = r
         end_time = time.time()
-        case_num += 500
+        case_num += 100
         #h_list.append( -np.log10(1-len(case_list)/(case_num+1)) )
         if if_break : continue
         try :   print( "{}/{}={}---{} it/s".format( len(case_list),(case_num+1),len(case_list)/(case_num+1),shorten_number(1/(end_time-start_time))),end="\r" )
         except : pass
-        if q != 0 or len(case_list) <= h_list[-1] or case_num >= 5e7 or len(case_list) >= 5e6 : break
+        if q != 0 or len(case_list) <= h_list[-1] or case_num >= 1e6 or len(case_list) >= 1e5 : break
         h_list.append(len(case_list))
         if len( rec_list ) == len(pick_data) and rec_list not in case_list: case_list.append(rec_list)   
 
@@ -120,7 +118,7 @@ def main():
     min_score = -1
     max_score = -1
     chosen_case = {}
-    for case_d in case_list :
+    for case_d in tqdm(case_list) :
         space_case = copy.deepcopy(space_case_ori)
         for idx,ele in enumerate(case_d) :
             x = sorted_pick_data[idx][0][0]
@@ -189,16 +187,14 @@ def main():
                 #sorted_pick_data_byscore.remove(ele_spd)
                 #break
         if len(interlude_dict[idx]) == 0 :
-            
             tmp_rec = []
             for idx_spd,ele_spd in enumerate(sorted_pick_data_byscorelen) :
                 tmp_rec.append( ele_spd )
                 #if int(sum([ i[-1] for i in tmp_rec])*1.1) > ele : break
-                if int(sum([ i[-1]-10 for i in tmp_rec])) > ele : break
+                if (int(sum([ i[-1]-10 for i in tmp_rec]))*1.1+10) > ele : break
             interlude_dict[idx] += tmp_rec
             for t_ele in tmp_rec :
                 sorted_pick_data_byscorelen.remove(t_ele)
-
 
 
     paragraph_dict["vocal_data"] = vocal_dict
