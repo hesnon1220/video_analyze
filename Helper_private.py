@@ -494,7 +494,7 @@ def fft(input_data,samplerate,sampling_interval) -> list:
     d1 = np.array([ input_data[i][0] for i in range(lenth) ])   #單聲道資料
     fft_interval = int(samplerate * sampling_interval)  #計算區間
     result = []
-    for i in tqdm(range(int(lenth/fft_interval))):    #分段進行傅立葉轉換
+    for i in range(int(lenth/fft_interval)):    #分段進行傅立葉轉換
         fft_tmp = np.abs(np.fft.fft(d1[fft_interval*i :fft_interval*(i+1)]))
         fft_tmp = fft_tmp[:int(np.shape(fft_tmp)[0]/2) ]    #保留一半傅立葉轉換
         result.append(fft_tmp)
