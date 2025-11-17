@@ -1,0 +1,16 @@
+專案描述:
+此專案的目的為「輸入影像、音樂、歌詞，自動化生成剪輯影片」
+(以專案以F:\work\video_analyze\mian_process為根目錄)
+
+架構設計:
+1. 影像分析模組 (image_analysis)
+    - 功能: 分析輸入的影像素材，提取關鍵畫面和場景變化。
+    - 輸入: 影像檔案
+    - 輸出: 影像特徵資料(時間點、場景標籤等)
+    a. 時序畫面分割
+        - 參考程式碼: F:\work\video_analyze\mian_process\old_process\get_3hist.py,F:\work\video_analyze\mian_process\old_process\cut_video.py
+        - 概念設計: 使用影像處理技術如色彩直方圖、邊緣檢測等方法來分析影像內容，以「畫面的色直方圖差距超過一定閾值則判定為不同場景段落」且「該場景段落長度超過一定閾值」進行時間點的切割
+        - 輸入: 影像檔案
+        - 輸出: 場景切割時間點列表
+    b. 影像特徵提取
+        
