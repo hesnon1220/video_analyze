@@ -3,7 +3,7 @@ from scipy.io import wavfile
 import cv2
 from tqdm import tqdm
 import os
-from moviepy.editor import AudioFileClip,VideoFileClip
+from moviepy import AudioFileClip,VideoFileClip
 import argparse
 from pathlib import Path
 import time

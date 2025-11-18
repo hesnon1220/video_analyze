@@ -5,7 +5,7 @@ import librosa.display
 import os
 import cv2
 from tqdm import tqdm
-from moviepy.editor import AudioFileClip,VideoFileClip
+from moviepy import AudioFileClip,VideoFileClip
 from Helper_private import *
 import wave
 import pylab as pl
