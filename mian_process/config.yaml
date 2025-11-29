@@ -1,0 +1,47 @@
+# 專案配置文件
+project:
+  name: "自動剪輯影片生成系統"
+  version: "1.0.0"
+  author: "Video Analyze Team"
+  description: "輸入影像、音樂、歌詞，自動化生成剪輯影片"
+
+paths:
+  input:
+    video_dir: "../data/video"
+    audio_dir: "../data/audio"
+    lyrics_dir: "../data/lyrics"
+  output:
+    video_dir: "../output"
+    temp_dir: "../temp"
+    log_dir: "../logs"
+  models:
+    yolo_model: "../models/yolov5n.pt"
+
+# 影像分析設定
+image_analysis:
+  histogram:
+    threshold: 0.3  # 直方圖差異閾值
+    min_scene_length: 2.0  # 最小場景長度(秒)
+  yolo:
+    confidence: 0.5
+    device: "cpu"  # 或 "cuda"
+    
+# 音樂處理設定  
+music_processing:
+  demucs:
+    model: "htdemucs"
+    device: "cpu"
+  tempo:
+    hop_length: 512
+    
+# 影片生成設定
+video_generation:
+  fps: 30
+  resolution: [1920, 1080]
+  format: "mp4"
+  
+# LLM設定
+llm:
+  model: "gpt-3.5-turbo"
+  max_tokens: 1000
+  temperature: 0.7
