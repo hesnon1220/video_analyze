@@ -1,16 +1,115 @@
-data/*
-output/*
-__pycache__/*
-separated/*
-*/*.mp4
-*/*.avi
-*/*.mp3
-*/*.wav
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+video_analyze/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Large media files
 *.mp4
 *.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.m4v
+*.3gp
+
+# Audio files
 *.mp3
 *.wav
+*.flac
+*.aac
+*.ogg
+*.wma
+
+# Image files (keep small reference images)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.jpeg
+
+# Model files
 *.pt
-出力/*
-my_work/*
-.vscode/
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.joblib
+
+# Output directories
+output/
+separated/
+出力/
+temp/
+logs/
+*.log
+
+# Data directories with large files
+data/**/*.mp4
+data/**/*.avi
+data/**/*.mp3
+data/**/*.wav
+
+# Configuration (keep templates but ignore personal configs)
+configure.json
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation build
+docs/_build/
+*.yml
+*.lrc
+*.srt
+*.txt
+*.n2proj
