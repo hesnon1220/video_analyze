@@ -46,11 +46,19 @@ class FeatureExtractor:
                 
                 self.model = YOLO(model_path)
                 
-                # 配置模型設備
+                # 配置模型設備 - 修復半精度問題
                 if self.device == 'cuda':
                     self.model.to(self.device)
-                    if self.half_precision:
-                        self.model.half()  # 使用半精度加速
+                    # 注意：某些YOLO版本不支持.half()方法，改為在推論時使用half參數
+                    try:
+                        if self.half_precision:
+                            # 嘗試設置半精度，如果失敗則忽略
+                            if hasattr(self.model.model, 'half'):
+                                self.model.model.half()
+                    except Exception as half_error:
+                        self.logger.warning(f"半精度設置失敗，將在推論時使用: {half_error}")
+                        # 禁用半精度標誌，改為在推論時處理
+                        self.half_precision = False
                 
                 self.logger.info(f"YOLO模型載入成功: {model_path} (設備: {self.device})")
             except Exception as e:

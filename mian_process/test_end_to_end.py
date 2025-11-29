@@ -10,6 +10,10 @@ from pathlib import Path
 import json
 import time
 
+# 🔧 修復OpenMP衝突問題
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+os.environ['OMP_NUM_THREADS'] = '4'
+
 # 添加專案根目錄到路徑
 sys.path.append(str(Path(__file__).parent))
 

@@ -122,39 +122,70 @@ class VideoComposer:
     
     def create_scene_clips(self, video_path: str, selected_scenes: List[Dict], 
                           beat_segments: List[Tuple[float, float]]) -> List:
-        """創建場景片段"""
+        """創建場景片段 - 修復音頻索引錯誤"""
         video_clip = VideoFileClip(video_path)
         scene_clips = []
         
+        # 獲取影片總時長作為安全邊界
+        video_duration = video_clip.duration
+        self.logger.info(f"影片總時長: {video_duration:.2f}秒")
+        
         for i, (scene, (start_time, end_time)) in enumerate(zip(selected_scenes, beat_segments)):
-            # 確保時間範圍在場景內
-            scene_start = max(scene['start_time'], start_time)
-            scene_end = min(scene['end_time'], end_time)
-            
-            if scene_end <= scene_start:
-                # 如果時間範圍無效，使用場景的前幾秒
-                scene_start = scene['start_time']
-                scene_end = min(scene['start_time'] + (end_time - start_time), scene['end_time'])
-            
-            # 創建片段
-            clip = video_clip.subclip(scene_start, scene_end)
-            
-            # 調整片段長度以匹配節拍
-            target_duration = end_time - start_time
-            if clip.duration != target_duration:
-                # 如果需要，調整播放速度
-                speed_factor = clip.duration / target_duration
-                if 0.5 <= speed_factor <= 2.0:  # 合理的速度範圍
-                    clip = clip.fx(lambda clip: clip.speedx(speed_factor))
-                else:
-                    # 如果速度調整太大，就截取或循環
-                    if clip.duration < target_duration:
-                        clip = clip.loop(duration=target_duration)
+            try:
+                # 確保時間範圍在影片總時長內
+                scene_start = max(scene['start_time'], start_time)
+                scene_end = min(scene['end_time'], end_time, video_duration - 0.1)  # 預留0.1秒緩衝
+                
+                if scene_end <= scene_start:
+                    # 如果時間範圍無效，使用場景的前幾秒
+                    scene_start = scene['start_time']
+                    scene_end = min(scene['start_time'] + (end_time - start_time), 
+                                  scene['end_time'], video_duration - 0.1)
+                
+                # 再次檢查時間範圍的有效性
+                if scene_end <= scene_start or scene_start >= video_duration:
+                    self.logger.warning(f"跳過無效時間範圍的場景 {i+1}: {scene_start:.2f}s - {scene_end:.2f}s")
+                    continue
+                
+                # 創建片段 - 添加錯誤處理
+                try:
+                    clip = video_clip.subclip(scene_start, scene_end)
+                    
+                    # 檢查clip是否有效
+                    if clip.duration <= 0:
+                        self.logger.warning(f"場景片段 {i+1} 時長無效，跳過")
+                        continue
+                        
+                except Exception as clip_error:
+                    self.logger.error(f"創建場景片段 {i+1} 失敗: {clip_error}")
+                    continue
+                
+                # 調整片段長度以匹配節拍
+                target_duration = end_time - start_time
+                if abs(clip.duration - target_duration) > 0.1:  # 如果差異超過0.1秒
+                    # 如果需要，調整播放速度
+                    speed_factor = clip.duration / target_duration
+                    if 0.5 <= speed_factor <= 2.0:  # 合理的速度範圍
+                        try:
+                            clip = clip.fx(lambda c: c.speedx(speed_factor))
+                        except Exception as speed_error:
+                            self.logger.warning(f"速度調整失敗，使用原始片段: {speed_error}")
                     else:
-                        clip = clip.subclip(0, target_duration)
-            
-            scene_clips.append(clip)
-            self.logger.info(f"創建場景片段 {i+1}: {scene_start:.2f}s - {scene_end:.2f}s")
+                        # 如果速度調整太大，就截取或循環
+                        if clip.duration < target_duration:
+                            try:
+                                clip = clip.loop(duration=target_duration)
+                            except Exception as loop_error:
+                                self.logger.warning(f"片段循環失敗: {loop_error}")
+                        else:
+                            clip = clip.subclip(0, target_duration)
+                
+                scene_clips.append(clip)
+                self.logger.info(f"創建場景片段 {i+1}: {scene_start:.2f}s - {scene_end:.2f}s (時長: {clip.duration:.2f}s)")
+                
+            except Exception as e:
+                self.logger.error(f"處理場景 {i+1} 時發生錯誤: {e}")
+                continue
         
         return scene_clips
     
@@ -197,7 +228,7 @@ class VideoComposer:
                rhythm_data: Dict, lyrics_path: Optional[str] = None,
                output_path: str = "output.mp4") -> str:
         """
-        合成最終影片
+        合成最終影片 - 修復版本
         
         Args:
             video_path: 原始影片路徑
@@ -215,47 +246,92 @@ class VideoComposer:
         # 確保輸出目錄存在
         ensure_dir(Path(output_path).parent)
         
-        # 載入歌詞
-        lyrics_data = self.load_lyrics(lyrics_path) if lyrics_path else []
-        
-        # 獲取節拍片段
-        beat_times = rhythm_data.get('tempo', {}).get('beat_times', [])
-        video_info = get_video_info(video_path)
-        video_duration = video_info['duration']
-        
-        # 從節拍分析器獲取剪輯點
-        from music_processing.rhythm_analyzer import RhythmAnalyzer
-        analyzer = RhythmAnalyzer(self.config)
-        beat_segments = analyzer.get_cut_points_from_beats(beat_times, video_duration)
-        
-        # 選擇最佳場景
-        selected_scenes = self.select_best_scenes(scenes, rhythm_data, len(beat_segments))
-        
-        # 創建場景片段
-        scene_clips = self.create_scene_clips(video_path, selected_scenes, beat_segments)
-        
-        if not scene_clips:
-            raise ValueError("沒有有效的場景片段可以合成")
-        
-        # 合併所有片段
-        self.logger.info("合併影片片段...")
-        final_video = concatenate_videoclips(scene_clips)
-        
-        # 添加歌詞覆蓋
-        if lyrics_data:
-            final_video = self.add_lyrics_overlay(final_video, lyrics_data)
-        
-        # 輸出影片
-        self.logger.info(f"輸出影片到: {output_path}")
-        final_video.write_videofile(
-            output_path,
-            fps=self.fps,
-            codec='libx264',
-            audio_codec='aac'
-        )
-        
-        # 清理資源
-        final_video.close()
-        
-        self.logger.info("影片合成完成")
-        return output_path
+        try:
+            # 載入歌詞
+            lyrics_data = self.load_lyrics(lyrics_path) if lyrics_path else []
+            
+            # 獲取節拍片段
+            beat_times = rhythm_data.get('tempo', {}).get('beat_times', [])
+            video_info = get_video_info(video_path)
+            video_duration = video_info['duration']
+            
+            self.logger.info(f"影片資訊: 時長 {video_duration:.2f}秒, 節拍點 {len(beat_times)}個")
+            
+            # 從節拍分析器獲取剪輯點
+            from music_processing.rhythm_analyzer import RhythmAnalyzer
+            analyzer = RhythmAnalyzer(self.config)
+            beat_segments = analyzer.get_cut_points_from_beats(beat_times, video_duration)
+            
+            self.logger.info(f"生成 {len(beat_segments)} 個節拍段落")
+            
+            # 選擇最佳場景
+            selected_scenes = self.select_best_scenes(scenes, rhythm_data, len(beat_segments))
+            
+            # 創建場景片段
+            scene_clips = self.create_scene_clips(video_path, selected_scenes, beat_segments)
+            
+            if not scene_clips:
+                raise ValueError("沒有有效的場景片段可以合成")
+            
+            self.logger.info(f"成功創建 {len(scene_clips)} 個場景片段")
+            
+            # 合併所有片段
+            self.logger.info("合併影片片段...")
+            try:
+                final_video = concatenate_videoclips(scene_clips, method="compose")
+            except Exception as concat_error:
+                self.logger.warning(f"使用compose方法合併失敗，嘗試chain方法: {concat_error}")
+                final_video = concatenate_videoclips(scene_clips, method="chain")
+            
+            # 添加歌詞覆蓋
+            if lyrics_data:
+                try:
+                    final_video = self.add_lyrics_overlay(final_video, lyrics_data)
+                    self.logger.info("歌詞覆蓋添加成功")
+                except Exception as lyrics_error:
+                    self.logger.warning(f"歌詞覆蓋添加失敗，繼續無歌詞版本: {lyrics_error}")
+            
+            # 輸出影片 - 添加更多錯誤處理
+            self.logger.info(f"輸出影片到: {output_path}")
+            
+            try:
+                final_video.write_videofile(
+                    output_path,
+                    fps=self.fps,
+                    codec='libx264',
+                    audio_codec='aac',
+                    temp_audiofile='temp-audio.m4a',
+                    remove_temp=True,
+                    verbose=False,
+                    logger=None  # 禁用moviepy的詳細日誌
+                )
+            except Exception as write_error:
+                self.logger.error(f"影片輸出失敗: {write_error}")
+                # 嘗試無音頻輸出
+                self.logger.info("嘗試輸出無音頻版本...")
+                final_video_no_audio = final_video.without_audio()
+                final_video_no_audio.write_videofile(
+                    output_path.replace('.mp4', '_no_audio.mp4'),
+                    fps=self.fps,
+                    codec='libx264',
+                    verbose=False,
+                    logger=None
+                )
+                output_path = output_path.replace('.mp4', '_no_audio.mp4')
+                self.logger.info(f"無音頻版本輸出成功: {output_path}")
+            
+            # 清理資源
+            try:
+                final_video.close()
+                for clip in scene_clips:
+                    if hasattr(clip, 'close'):
+                        clip.close()
+            except Exception as cleanup_error:
+                self.logger.warning(f"資源清理失敗: {cleanup_error}")
+            
+            self.logger.info("影片合成完成")
+            return output_path
+            
+        except Exception as e:
+            self.logger.error(f"影片合成過程中發生錯誤: {e}")
+            raise
