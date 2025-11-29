@@ -113,3 +113,151 @@ docs/_build/
 *.srt
 *.txt
 *.n2proj
+
+# =============================================================================
+# 自動剪輯影片生成系統 - Git忽略文件
+# =============================================================================
+
+# 輸出文件和結果 - 避免大文件上傳
+output/
+separated/
+出力/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.flv
+
+# 音頻輸出文件
+*.wav
+*.mp3
+*.flac
+*.aac
+*.m4a
+separated_audio/
+
+# 模型文件 - 太大不適合git追蹤
+models/
+*.pt
+*.pth
+*.onnx
+*.pb
+*.h5
+*.pkl
+*.joblib
+
+# 暫存和快取文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+.tox/
+.cache
+
+# 開發環境文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 日誌文件
+logs/
+*.log
+*.out
+
+# 臨時文件和處理中的文件
+temp/
+tmp/
+*.tmp
+*.temp
+processing/
+
+# 測試資料和大型測試文件
+test_*.mp4
+test_*.avi
+test_*.wav
+test_*.mp3
+test_data/
+sample_videos/
+sample_audios/
+
+# 個人配置和敏感資訊
+config_local.yaml
+.env
+*.key
+*.secret
+
+# 機器學習相關暫存
+tensorboard_logs/
+checkpoints/
+wandb/
+mlruns/
+
+# 系統生成文件
+.ipynb_checkpoints/
+*.pid
+*.seed
+*.log.*
+
+# 特定於專案的大型資料
+data/video/
+data/audio/
+my_work/output/
+my_work/sound/
+my_work/video/
+
+# 編譯和建置文件
+build/
+dist/
+*.egg-info/
+.wheel/
+
+# 備份文件
+*.bak
+*.backup
+*_backup.*
+*_old.*
+
+# 圖像處理暫存
+hist_img/
+cutimg/
+label/
+var_hist/
+cut_video/
+cut_video_data/
+
+# FFmpeg暫存文件
+ffmpeg*.exe
+ffprobe*.exe
+
+# 系統特定忽略
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+
+# Linux
+.Trash-*
+
+# 保留重要的小型範例文件（取消忽略）
+!docs/sample_lyrics.json
+!README*.md
+!requirements.txt
+!config.yaml
+!setup*.py
+
+# 但仍要忽略生成的配置摘要
+*summary*.json
+*report*.json

@@ -5,6 +5,12 @@ project:
   author: "Video Analyze Team"
   description: "輸入影像、音樂、歌詞，自動化生成剪輯影片"
 
+# 硬體加速設定
+hardware:
+  # GPU設定 - 自動檢測CUDA可用性
+  device: "auto"  # auto, cuda, cpu
+  gpu_memory_fraction: 0.8  # GPU記憶體使用比例
+
 paths:
   input:
     video_dir: "../data/video"
@@ -15,31 +21,110 @@ paths:
     temp_dir: "../temp"
     log_dir: "../logs"
   models:
-    yolo_model: "../models/yolov5n.pt"
+    yolo_model: "../models/yolov8n.pt"  # 更新為YOLOv8
+    yolo_seg_model: "../models/yolov8n-seg.pt"  # 分割模型
+    demucs_model_cache: "../models/demucs"
 
-# 影像分析設定
+# 影像分析設定 - 優化參數
 image_analysis:
   histogram:
-    threshold: 0.3  # 直方圖差異閾值
-    min_scene_length: 2.0  # 最小場景長度(秒)
+    threshold: 0.25  # 降低閾值以提高敏感度
+    min_scene_length: 1.5  # 縮短最小場景長度
+    blur_threshold: 100  # 模糊檢測閾值
+
   yolo:
-    confidence: 0.5
-    device: "cpu"  # 或 "cuda"
-    
-# 音樂處理設定  
+    # YOLO物體檢測設定
+    model_size: "n"  # n, s, m, l, x (nano, small, medium, large, extra-large)
+    confidence: 0.4  # 降低置信度閾值以檢測更多物體
+    iou_threshold: 0.5  # IoU閾值
+    max_detections: 300  # 最大檢測數量
+    device: "auto"  # 自動選擇設備
+    half_precision: true  # 使用半精度加速
+
+    # 關注的物體類別 (COCO類別)
+    target_classes: [0, 1, 2, 3, 5, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]  # 人、動物、車輛等
+
+    # 場景分析設定
+    scene_analysis:
+      person_threshold: 0.3  # 人物檢測閾值
+      object_density_threshold: 5  # 物體密度閾值
+      movement_detection: true  # 啟用運動檢測
+
+# 音樂處理設定 - 優化參數  
 music_processing:
+  # Demucs音源分離設定
   demucs:
-    model: "htdemucs"
-    device: "cpu"
+    model: "htdemucs"  # htdemucs, mdx_extra_q, mdx_q, mdx
+    device: "auto"  # 自動選擇設備
+    shifts: 1  # 音頻增強次數 (1-10，更高質量但更慢)
+    overlap: 0.25  # 重疊比例
+    split: true  # 分割長音頻以節省記憶體
+    segment_length: 10  # 分割段長度(秒)
+
+    # 輸出設定
+    output_format: "wav"  # wav, flac, mp3
+    bitrate: 320  # mp3比特率
+
+    # 分離的音軌
+    stems: ["vocals", "drums", "bass", "other"]
+
+  # 節拍和節奏分析
   tempo:
     hop_length: 512
-    
-# 影片生成設定
+    sr: 22050  # 採樣率
+
+  # 節拍檢測優化
+  beat_tracking:
+    units: "time"  # time, frames
+    trim: true  # 修剪靜音部分
+    start_bpm: 120  # 起始BPM估計
+
+  # 頻譜分析
+  spectral:
+    n_fft: 2048
+    hop_length: 512
+    n_mels: 128  # Mel頻率數量
+
+# 影片生成設定 - 優化參數
 video_generation:
+  # 輸出設定
   fps: 30
   resolution: [1920, 1080]
   format: "mp4"
-  
+
+  # 編碼設定
+  codec: "h264"
+  bitrate: "8M"  # 視頻比特率
+  audio_bitrate: "192k"  # 音頻比特率
+
+  # 過渡效果
+  transitions:
+    default_duration: 0.5  # 預設過渡時間(秒)
+    types: ["fade", "dissolve", "slide", "zoom"]  # 可用過渡類型
+
+  # 剪輯策略
+  editing:
+    beat_sync: true  # 節拍同步
+    scene_priority: 0.7  # 場景優先級權重
+    object_priority: 0.3  # 物體檢測優先級權重
+    min_clip_length: 2.0  # 最短片段長度
+    max_clip_length: 8.0  # 最長片段長度
+
+# 性能優化設定
+performance:
+  # 多線程設定
+  num_workers: 4  # CPU工作線程數
+  batch_size: 8  # 批次大小
+
+  # 記憶體管理
+  max_memory_usage: 0.8  # 最大記憶體使用比例
+  cache_size: 1000  # 快取大小(MB)
+
+  # 預處理優化
+  preprocessing:
+    resize_factor: 1.0  # 預處理時的縮放因子
+    skip_frames: 1  # 跳幀數量(1=不跳幀)
+
 # LLM設定
 llm:
   model: "gpt-3.5-turbo"
