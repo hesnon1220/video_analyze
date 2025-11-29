@@ -261,3 +261,5 @@ Icon
 # 但仍要忽略生成的配置摘要
 *summary*.json
 *report*.json
+
+.venv/
